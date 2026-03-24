@@ -1,280 +1,447 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LLM Sizing Guide</title>
-<style>
-  :root {
-    --bg: #0d1117; --surface: #161b22; --border: #30363d;
-    --text: #e6edf3; --text2: #8b949e; --accent: #58a6ff;
-    --green: #3fb950; --yellow: #d29922; --red: #f85149;
-    --radius: 8px;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
-    background: var(--bg); color: var(--text); line-height: 1.6;
-    padding: 24px; max-width: 1280px; margin: 0 auto;
-  }
-  h1 { font-size: 1.8rem; margin-bottom: 4px; }
-  h2 { font-size: 1.2rem; color: var(--accent); margin: 28px 0 12px; }
-  .subtitle { color: var(--text2); font-size: 0.95rem; margin-bottom: 24px; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLM Sizing Guide</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text2: #8b949e;
+      --accent: #58a6ff;
+      --green: #3fb950;
+      --yellow: #d29922;
+      --red: #f85149;
+      --radius: 8px;
+    }
 
-  /* Input panel */
-  .input-panel {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 20px 24px; margin-bottom: 24px;
-  }
-  .input-grid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px; margin-bottom: 16px;
-  }
-  label { display: block; color: var(--text2); font-size: 0.85rem; margin-bottom: 4px; }
-  input[type=number], select {
-    width: 100%; padding: 8px 12px; border-radius: 6px;
-    border: 1px solid var(--border); background: var(--bg);
-    color: var(--text); font-size: 0.95rem;
-  }
-  input[type=number]:focus, select:focus {
-    outline: none; border-color: var(--accent);
-  }
-  .hint { font-size: 0.78rem; color: var(--text2); margin-top: 2px; }
-  button {
-    background: var(--accent); color: #fff; border: none;
-    padding: 10px 28px; border-radius: 6px; font-size: 0.95rem;
-    cursor: pointer; font-weight: 600;
-  }
-  button:hover { opacity: 0.9; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-  /* Tables */
-  .table-wrap { overflow-x: auto; margin-bottom: 24px; }
-  table {
-    width: 100%; border-collapse: collapse; font-size: 0.85rem;
-  }
-  th {
-    background: var(--surface); color: var(--accent); text-align: left;
-    padding: 10px 12px; border-bottom: 2px solid var(--border);
-    position: sticky; top: 0; white-space: nowrap;
-  }
-  td {
-    padding: 8px 12px; border-bottom: 1px solid var(--border);
-    white-space: nowrap;
-  }
-  tr:hover td { background: rgba(88,166,255,0.04); }
-  .tag {
-    display: inline-block; font-size: 0.72rem; padding: 1px 6px;
-    border-radius: 10px; font-weight: 600; vertical-align: middle;
-  }
-  .tag-moe { background: rgba(210,153,34,0.15); color: var(--yellow); }
-  .tag-dense { background: rgba(63,185,80,0.12); color: var(--green); }
-  .warn { color: var(--red); font-weight: 600; }
-  .ok { color: var(--green); }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 24px;
+      max-width: 1280px;
+      margin: 0 auto;
+    }
 
-  /* Assumptions */
-  .assumptions {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 16px 20px; margin-top: 8px;
-    font-size: 0.82rem; color: var(--text2);
-  }
-  .assumptions summary {
-    cursor: pointer; color: var(--text); font-weight: 600; font-size: 0.9rem;
-  }
-  .assumptions ul { margin: 8px 0 0 18px; }
-  .assumptions li { margin-bottom: 4px; }
-  .assumptions code { background: var(--bg); padding: 1px 5px; border-radius: 3px; font-size: 0.8rem; }
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 4px;
+    }
 
-  footer { margin-top: 36px; color: var(--text2); font-size: 0.8rem; text-align: center; }
-  a { color: var(--accent); text-decoration: none; }
-  a:hover { text-decoration: underline; }
-</style>
+    h2 {
+      font-size: 1.2rem;
+      color: var(--accent);
+      margin: 28px 0 12px;
+    }
+
+    .subtitle {
+      color: var(--text2);
+      font-size: 0.95rem;
+      margin-bottom: 24px;
+    }
+
+    /* Input panel */
+    .input-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-bottom: 24px;
+    }
+
+    .input-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      color: var(--text2);
+      font-size: 0.85rem;
+      margin-bottom: 4px;
+    }
+
+    input[type=number],
+    select {
+      width: 100%;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 0.95rem;
+    }
+
+    input[type=number]:focus,
+    select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .hint {
+      font-size: 0.78rem;
+      color: var(--text2);
+      margin-top: 2px;
+    }
+
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 10px 28px;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    /* Tables */
+    .table-wrap {
+      overflow-x: auto;
+      margin-bottom: 24px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    th {
+      background: var(--surface);
+      color: var(--accent);
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 2px solid var(--border);
+      position: sticky;
+      top: 0;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    tr:hover td {
+      background: rgba(88, 166, 255, 0.04);
+    }
+
+    .tag {
+      display: inline-block;
+      font-size: 0.72rem;
+      padding: 1px 6px;
+      border-radius: 10px;
+      font-weight: 600;
+      vertical-align: middle;
+    }
+
+    .tag-moe {
+      background: rgba(210, 153, 34, 0.15);
+      color: var(--yellow);
+    }
+
+    .tag-dense {
+      background: rgba(63, 185, 80, 0.12);
+      color: var(--green);
+    }
+
+    .warn {
+      color: var(--red);
+      font-weight: 600;
+    }
+
+    .ok {
+      color: var(--green);
+    }
+
+    /* Assumptions */
+    .assumptions {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-top: 8px;
+      font-size: 0.82rem;
+      color: var(--text2);
+    }
+
+    .assumptions summary {
+      cursor: pointer;
+      color: var(--text);
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .assumptions ul {
+      margin: 8px 0 0 18px;
+    }
+
+    .assumptions li {
+      margin-bottom: 4px;
+    }
+
+    .assumptions code {
+      background: var(--bg);
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 0.8rem;
+    }
+
+    footer {
+      margin-top: 36px;
+      color: var(--text2);
+      font-size: 0.8rem;
+      text-align: center;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
 </head>
+
 <body>
 
-<h1>LLM Sizing Guide</h1>
-<p class="subtitle">Estimate GPU memory, latency &amp; throughput for popular open-weight models</p>
+  <h1>LLM Sizing Guide</h1>
+  <p class="subtitle">Estimate GPU memory, latency &amp; throughput for popular open-weight models</p>
 
-<!-- Inputs -->
-<div class="input-panel">
-  <div class="input-grid">
-    <div>
-      <label for="inputTokens">Input Size (tokens)</label>
-      <input type="number" id="inputTokens" value="4096" min="1" max="131072">
-      <div class="hint">Prompt / context length</div>
+  <!-- Inputs -->
+  <div class="input-panel">
+    <div class="input-grid">
+      <div>
+        <label for="inputTokens">Input Size (tokens)</label>
+        <input type="number" id="inputTokens" value="4096" min="1" max="131072">
+        <div class="hint">Prompt / context length</div>
+      </div>
+      <div>
+        <label for="outputTokens">Output Size (tokens)</label>
+        <input type="number" id="outputTokens" value="256" min="1" max="131072">
+        <div class="hint">Response length to generate</div>
+      </div>
+      <div>
+        <label for="concurrent">Concurrent Requests</label>
+        <input type="number" id="concurrent" value="10" min="1" max="10000">
+        <div class="hint">Simultaneous users / batch size</div>
+      </div>
     </div>
-    <div>
-      <label for="outputTokens">Output Size (tokens)</label>
-      <input type="number" id="outputTokens" value="256" min="1" max="131072">
-      <div class="hint">Response length to generate</div>
-    </div>
-    <div>
-      <label for="concurrent">Concurrent Requests</label>
-      <input type="number" id="concurrent" value="10" min="1" max="10000">
-      <div class="hint">Simultaneous users / batch size</div>
-    </div>
+    <button onclick="calculate()">Calculate</button>
   </div>
-  <button onclick="calculate()">Calculate</button>
-</div>
 
-<!-- Memory Footprint -->
-<h2>Memory Footprint</h2>
-<div class="table-wrap"><table id="memTable"><thead></thead><tbody></tbody></table></div>
+  <!-- Memory Footprint -->
+  <h2>Memory Footprint</h2>
+  <div class="table-wrap">
+    <table id="memTable">
+      <thead></thead>
+      <tbody></tbody>
+    </table>
+  </div>
 
-<!-- Performance by GPU -->
-<h2>Performance by GPU</h2>
-<div class="table-wrap"><table id="perfTable"><thead></thead><tbody></tbody></table></div>
+  <!-- Performance by GPU -->
+  <h2>Performance by GPU</h2>
+  <div class="table-wrap">
+    <table id="perfTable">
+      <thead></thead>
+      <tbody></tbody>
+    </table>
+  </div>
 
-<!-- Assumptions -->
-<details class="assumptions" open>
-  <summary>Assumptions &amp; Methodology</summary>
-  <ul>
-    <li><strong>Weight precision:</strong> FP16 (2 bytes per parameter) for dense models. GPT-oss MoE models use MXFP4 quantization (0.5 bytes) for expert weights + BF16 for other weights — actual model sizes are provided as overrides (e.g. GPT-oss-120B ≈ 63 GB, fits a single H100).</li>
-    <li><strong>KV cache precision:</strong> FP16 (2 bytes per value). Size per token = <code>2 × layers × kv_heads × head_dim × 2 bytes</code>.</li>
-    <li><strong>Memory footprint</strong> = model weights + KV cache for all concurrent requests across the full context window (input + output).</li>
-    <li><strong>Mixture-of-Experts (MoE) models</strong> <span class="tag tag-moe">MoE</span>: Some models (like GPT-oss) use a technique where only a small fraction of the total weights are used per token. <em>All</em> weights must still fit in GPU memory, but per-token compute is much faster — we use the "active parameters" for latency calculations and "total parameters" for memory.</li>
-    <li><strong>Prefill time/token</strong> (compute-bound): <code>2 × active_params / GPU_TFLOPS</code>. This is the time to process each input token.</li>
-    <li><strong>TPOT</strong> — Time Per Output Token (memory-bandwidth-bound): <code>2 × active_params / bandwidth × 1000 ms</code>.</li>
-    <li><strong>TTFT</strong> — Time To First Token ≈ <code>prefill_time + TPOT/1000</code>.</li>
-    <li><strong>E2E Latency</strong> = <code>(input × prefill_time + output × TPOT) / 1000 s</code>.</li>
-    <li><strong>Throughput</strong> = <code>output_tokens / E2E_latency</code> (single-request output token rate).</li>
-    <li>GPU count is fixed at <strong>1 GPU</strong>. For multi-GPU setups, memory and compute scale linearly (use the Python CLI for multi-GPU).</li>
-    <li>These are <em>theoretical best-case</em> estimates. Real-world performance depends on serving framework, batching, quantization, and system overhead.</li>
-  </ul>
-</details>
+  <!-- Assumptions -->
+  <details class="assumptions" open>
+    <summary>Assumptions &amp; Methodology</summary>
+    <ul>
+      <li><strong>Weight precision:</strong> FP16 (2 bytes per parameter) for dense models. GPT-oss MoE models use MXFP4
+        quantization (0.5 bytes) for expert weights + BF16 for other weights — actual model sizes are provided as
+        overrides (e.g. GPT-oss-120B ≈ 63 GB, fits a single H100).</li>
+      <li><strong>KV cache precision:</strong> FP16 (2 bytes per value). Size per token =
+        <code>2 × layers × kv_heads × head_dim × 2 bytes</code>.
+      </li>
+      <li><strong>Memory footprint</strong> = model weights + KV cache for all concurrent requests across the full
+        context window (input + output).</li>
+      <li><strong>Mixture-of-Experts (MoE) models</strong> <span class="tag tag-moe">MoE</span>: Some models (like
+        GPT-oss) use a technique where only a small fraction of the total weights are used per token. <em>All</em>
+        weights must still fit in GPU memory, but per-token compute is much faster — we use the "active parameters" for
+        latency calculations and "total parameters" for memory.</li>
+      <li><strong>Prefill time/token</strong> (compute-bound): <code>2 × active_params / GPU_TFLOPS</code>. This is the
+        time to process each input token.</li>
+      <li><strong>TPOT</strong> — Time Per Output Token (memory-bandwidth-bound):
+        <code>2 × active_params / bandwidth × 1000 ms</code>.
+      </li>
+      <li><strong>TTFT</strong> — Time To First Token ≈ <code>prefill_time + TPOT/1000</code>.</li>
+      <li><strong>E2E Latency</strong> = <code>(input × prefill_time + output × TPOT) / 1000 s</code>.</li>
+      <li><strong>Throughput</strong> = <code>output_tokens / E2E_latency</code> (single-request output token rate).
+      </li>
+      <li>Latency/throughput numbers assume <strong>1 GPU</strong>. The "Min GPUs" column shows how many GPUs of that
+        type are needed just for memory. For multi-GPU setups, compute and bandwidth scale linearly (use the Python CLI
+        for detailed multi-GPU estimates).</li>
+      <li>These are <em>theoretical best-case</em> estimates. Real-world performance depends on serving framework,
+        batching, quantization, and system overhead.</li>
+    </ul>
+  </details>
 
-<footer>
-  <a href="https://github.com/qoofyk/LLM_Sizing_Guide">LLM Sizing Guide</a> — for precise multi-GPU calculations, use the Python CLI.
-</footer>
+  <footer>
+    <a href="https://github.com/qoofyk/LLM_Sizing_Guide">LLM Sizing Guide</a> — for precise multi-GPU calculations, use
+    the Python CLI.
+  </footer>
 
-<script>
-"use strict";
-// ── Data ──────────────────────────────────────────────────────
-const MODELS = [
-  { name:"Llama-3.1-8B",    params:8,    dModel:4096, nHeads:32, nKvHeads:8,  nLayers:32, maxCtx:131072, activeParams:null, headDim:null, numExperts:0, expertsPerToken:0, modelSizeGb:null },
-  { name:"Llama-3.1-70B",   params:70,   dModel:8192, nHeads:64, nKvHeads:8,  nLayers:80, maxCtx:131072, activeParams:null, headDim:null, numExperts:0, expertsPerToken:0, modelSizeGb:null },
-  { name:"Mistral-7B-v0.3", params:7,    dModel:4096, nHeads:32, nKvHeads:8,  nLayers:32, maxCtx:32768,  activeParams:null, headDim:null, numExperts:0, expertsPerToken:0, modelSizeGb:null },
-  { name:"Qwen2.5-14B",     params:14.7, dModel:5120, nHeads:40, nKvHeads:8,  nLayers:48, maxCtx:131072, activeParams:null, headDim:null, numExperts:0, expertsPerToken:0, modelSizeGb:null },
-  { name:"GPT-oss-120B",    params:117,  dModel:2880, nHeads:64, nKvHeads:8,  nLayers:36, maxCtx:131072, activeParams:5.1,  headDim:64,   numExperts:128, expertsPerToken:4, modelSizeGb:63 },
-  { name:"GPT-oss-20B",     params:21,   dModel:2880, nHeads:64, nKvHeads:8,  nLayers:24, maxCtx:131072, activeParams:3.6,  headDim:64,   numExperts:32,  expertsPerToken:4, modelSizeGb:14 },
-];
+  <script>
+    "use strict";
+    // ── Data ──────────────────────────────────────────────────────
+    const MODELS = [
+      { name: "Llama-3.1-8B", params: 8, dModel: 4096, nHeads: 32, nKvHeads: 8, nLayers: 32, maxCtx: 131072, activeParams: null, headDim: null, numExperts: 0, expertsPerToken: 0, modelSizeGb: null },
+      { name: "Llama-3.1-70B", params: 70, dModel: 8192, nHeads: 64, nKvHeads: 8, nLayers: 80, maxCtx: 131072, activeParams: null, headDim: null, numExperts: 0, expertsPerToken: 0, modelSizeGb: null },
+      { name: "Mistral-7B-v0.3", params: 7, dModel: 4096, nHeads: 32, nKvHeads: 8, nLayers: 32, maxCtx: 32768, activeParams: null, headDim: null, numExperts: 0, expertsPerToken: 0, modelSizeGb: null },
+      { name: "Qwen2.5-14B", params: 14.7, dModel: 5120, nHeads: 40, nKvHeads: 8, nLayers: 48, maxCtx: 131072, activeParams: null, headDim: null, numExperts: 0, expertsPerToken: 0, modelSizeGb: null },
+      { name: "GPT-oss-120B", params: 117, dModel: 2880, nHeads: 64, nKvHeads: 8, nLayers: 36, maxCtx: 131072, activeParams: 5.1, headDim: 64, numExperts: 128, expertsPerToken: 4, modelSizeGb: 63 },
+      { name: "GPT-oss-20B", params: 21, dModel: 2880, nHeads: 64, nKvHeads: 8, nLayers: 24, maxCtx: 131072, activeParams: 3.6, headDim: 64, numExperts: 32, expertsPerToken: 4, modelSizeGb: 14 },
+    ];
 
-const GPUS = [
-  { name:"L40s",      fp16Tflops:362,   memGb:48,  bwGbps:864  },
-  { name:"H100 NVL",  fp16Tflops:835.5, memGb:94,  bwGbps:3900 },
-  { name:"H200 NVL",  fp16Tflops:835.5, memGb:141, bwGbps:4800 },
-  { name:"MI300X",    fp16Tflops:1307,  memGb:192, bwGbps:5300 },
-];
+    const GPUS = [
+      { name: "L40s", fp16Tflops: 362, memGb: 48, bwGbps: 864 },
+      { name: "H100 NVL", fp16Tflops: 835.5, memGb: 94, bwGbps: 3900 },
+      { name: "H200 NVL", fp16Tflops: 835.5, memGb: 141, bwGbps: 4800 },
+      { name: "MI300X", fp16Tflops: 1307, memGb: 192, bwGbps: 5300 },
+    ];
 
-const GiB = 1_073_741_824;
-const NUM_GPU = 1;
+    const GiB = 1_073_741_824;
+    const NUM_GPU = 1;
 
-// ── Helpers ───────────────────────────────────────────────────
-function effectiveHeadDim(m)  { return m.headDim !== null ? m.headDim : Math.floor(m.dModel / m.nHeads); }
-function computeParams(m)     { return m.activeParams !== null ? m.activeParams : m.params; }
-function isMoe(m)             { return m.numExperts > 0; }
-function weightMemoryGb(m)    { return m.modelSizeGb !== null ? m.modelSizeGb : m.params * 2; }
+    // ── Helpers ───────────────────────────────────────────────────
+    function effectiveHeadDim(m) { return m.headDim !== null ? m.headDim : Math.floor(m.dModel / m.nHeads); }
+    function computeParams(m) { return m.activeParams !== null ? m.activeParams : m.params; }
+    function isMoe(m) { return m.numExperts > 0; }
+    function weightMemoryGb(m) { return m.modelSizeGb !== null ? m.modelSizeGb : m.params * 2; }
 
-function kvCacheSizePerToken(m) {
-  return 2 * m.nLayers * m.nKvHeads * effectiveHeadDim(m) * 2 / GiB;
-}
-function memoryFootprint(m, concurrent, ctxWindow) {
-  return kvCacheSizePerToken(m) * ctxWindow * concurrent + weightMemoryGb(m);
-}
-function kvCacheTokens(gpu, m) {
-  const kv = kvCacheSizePerToken(m);
-  return Math.max(0, (NUM_GPU * gpu.memGb - weightMemoryGb(m)) / kv);
-}
-function prefillTimePerToken(m, gpu) {
-  return (2 * computeParams(m) / NUM_GPU) / gpu.fp16Tflops;            // ms
-}
-function tpot(m, gpu) {
-  return (2 * computeParams(m) / NUM_GPU) / gpu.bwGbps * 1000;         // ms
-}
-function e2eLatency(prefill, tp, isl, osl) {
-  return (isl * prefill + osl * tp) / 1000;                            // s
-}
+    function kvCacheSizePerToken(m) {
+      return 2 * m.nLayers * m.nKvHeads * effectiveHeadDim(m) * 2 / GiB;
+    }
+    function memoryFootprint(m, concurrent, ctxWindow) {
+      return kvCacheSizePerToken(m) * ctxWindow * concurrent + weightMemoryGb(m);
+    }
+    function kvCacheTokens(gpu, m) {
+      const kv = kvCacheSizePerToken(m);
+      return Math.max(0, (NUM_GPU * gpu.memGb - weightMemoryGb(m)) / kv);
+    }
+    function prefillTimePerToken(m, gpu) {
+      return (2 * computeParams(m) / NUM_GPU) / gpu.fp16Tflops;            // ms
+    }
+    function tpot(m, gpu) {
+      return (2 * computeParams(m) / NUM_GPU) / gpu.bwGbps * 1000;         // ms
+    }
+    function e2eLatency(prefill, tp, isl, osl) {
+      return (isl * prefill + osl * tp) / 1000;                            // s
+    }
 
-// ── Rendering ─────────────────────────────────────────────────
-function modelLabel(m) {
-  const tag = isMoe(m)
-    ? `<span class="tag tag-moe" title="${m.numExperts} experts, ${m.expertsPerToken} active per token — only ${m.activeParams}B params used per token">MoE</span>`
-    : `<span class="tag tag-dense">Dense</span>`;
-  return `${m.name} ${tag}`;
-}
+    // ── Rendering ─────────────────────────────────────────────────
+    function modelLabel(m) {
+      const tag = isMoe(m)
+        ? `<span class="tag tag-moe" title="${m.numExperts} experts, ${m.expertsPerToken} active per token — only ${m.activeParams}B params used per token">MoE</span>`
+        : `<span class="tag tag-dense">Dense</span>`;
+      return `${m.name} ${tag}`;
+    }
 
-function fitsGpu(memNeeded, gpu) {
-  return memNeeded <= NUM_GPU * gpu.memGb;
-}
+    function fitsGpu(memNeeded, gpu) {
+      return memNeeded <= NUM_GPU * gpu.memGb;
+    }
 
-function fmt(v, decimals, suffix) {
-  if (typeof v === "string") return `<span class="warn">${v}</span>`;
-  return v.toFixed(decimals) + (suffix || "");
-}
+    function minGpus(memNeeded, gpu) {
+      return Math.ceil(memNeeded / gpu.memGb);
+    }
 
-function calculate() {
-  const isl  = Math.max(1, +document.getElementById("inputTokens").value);
-  const osl  = Math.max(1, +document.getElementById("outputTokens").value);
-  const conc = Math.max(1, +document.getElementById("concurrent").value);
-  const ctx  = isl + osl;
+    function fmt(v, decimals, suffix) {
+      if (typeof v === "string") return `<span class="warn">${v}</span>`;
+      return v.toFixed(decimals) + (suffix || "");
+    }
 
-  // ── Memory table ──
-  let mHead = `<tr><th>Model</th><th>Type</th><th>Weight Size</th><th>KV Cache / Token</th><th>Memory Needed</th>`;
-  GPUS.forEach(g => mHead += `<th>${g.name} (${g.memGb} GB)</th>`);
-  mHead += `</tr>`;
-  document.querySelector("#memTable thead").innerHTML = mHead;
+    function calculate() {
+      const isl = Math.max(1, +document.getElementById("inputTokens").value);
+      const osl = Math.max(1, +document.getElementById("outputTokens").value);
+      const conc = Math.max(1, +document.getElementById("concurrent").value);
+      const ctx = isl + osl;
 
-  let mBody = "";
-  MODELS.forEach(m => {
-    const kv  = kvCacheSizePerToken(m);
-    const mem = memoryFootprint(m, conc, ctx);
-    mBody += `<tr>`;
-    mBody += `<td>${modelLabel(m)}</td>`;
-    mBody += `<td>${isMoe(m) ? m.activeParams + "B active / " + m.params + "B total" : m.params + "B"}</td>`;
-    mBody += `<td>${weightMemoryGb(m).toFixed(0)} GB</td>`;
-    mBody += `<td>${(kv * 1024 * 1024).toFixed(2)} KiB</td>`;
-    mBody += `<td>${mem.toFixed(1)} GB</td>`;
-    GPUS.forEach(g => {
-      const fits = fitsGpu(mem, g);
-      mBody += `<td class="${fits ? 'ok' : 'warn'}">${fits ? '✓ Fits' : '✗ OOM'}</td>`;
-    });
-    mBody += `</tr>`;
-  });
-  document.querySelector("#memTable tbody").innerHTML = mBody;
+      // ── Memory table ──
+      let mHead = `<tr><th>Model</th><th>Type</th><th>Weight Size</th><th>KV Cache / Token</th><th>Memory Needed</th>`;
+      GPUS.forEach(g => mHead += `<th>${g.name}<br><span style="font-weight:normal;font-size:0.75rem">(${g.memGb} GB/GPU)</span></th>`);
+      mHead += `</tr>`;
+      document.querySelector("#memTable thead").innerHTML = mHead;
 
-  // ── Performance table ──
-  let pHead = `<tr><th>Model</th><th>GPU</th><th>Prefill / Token</th><th>TPOT</th><th>TTFT</th><th>E2E Latency</th><th>Throughput</th><th>Max KV Tokens</th><th>Fit?</th></tr>`;
-  document.querySelector("#perfTable thead").innerHTML = pHead;
+      let mBody = "";
+      MODELS.forEach(m => {
+        const kv = kvCacheSizePerToken(m);
+        const mem = memoryFootprint(m, conc, ctx);
+        mBody += `<tr>`;
+        mBody += `<td>${modelLabel(m)}</td>`;
+        mBody += `<td>${isMoe(m) ? m.activeParams + "B active / " + m.params + "B total" : m.params + "B"}</td>`;
+        mBody += `<td>${weightMemoryGb(m).toFixed(0)} GB</td>`;
+        mBody += `<td>${(kv * 1024 * 1024).toFixed(2)} KiB</td>`;
+        mBody += `<td>${mem.toFixed(1)} GB</td>`;
+        GPUS.forEach(g => {
+          const n = minGpus(mem, g);
+          mBody += `<td class="${n === 1 ? 'ok' : ''}">${n === 1 ? '1 GPU' : n + ' GPUs'}</td>`;
+        });
+        mBody += `</tr>`;
+      });
+      document.querySelector("#memTable tbody").innerHTML = mBody;
 
-  let pBody = "";
-  MODELS.forEach(m => {
-    const mem = memoryFootprint(m, conc, ctx);
-    GPUS.forEach(g => {
-      const fits    = fitsGpu(mem, g);
-      const pf      = prefillTimePerToken(m, g);
-      const tp      = tpot(m, g);
-      const ttft    = pf + tp / 1000;
-      const e2e     = e2eLatency(pf, tp, isl, osl);
-      const thru    = e2e > 0 ? osl / e2e : 0;
-      const maxKv   = Math.floor(kvCacheTokens(g, m));
+      // ── Performance table ──
+      let pHead = `<tr><th>Model</th><th>GPU</th><th>Min GPUs</th><th>Prefill / Token</th><th>TPOT</th><th>TTFT</th><th>E2E Latency</th><th>Throughput</th><th>Max KV Tokens</th></tr>`;
+      document.querySelector("#perfTable thead").innerHTML = pHead;
 
-      pBody += `<tr>`;
-      pBody += `<td>${modelLabel(m)}</td>`;
-      pBody += `<td>${g.name}</td>`;
-      pBody += `<td>${fmt(pf, 3, " ms")}</td>`;
-      pBody += `<td>${fmt(tp, 3, " ms")}</td>`;
-      pBody += `<td>${fmt(ttft, 3, " s")}</td>`;
-      pBody += `<td>${fmt(e2e, 1, " s")}</td>`;
-      pBody += `<td>${fmt(thru, 1, " tok/s")}</td>`;
-      pBody += `<td>${maxKv.toLocaleString()}</td>`;
-      pBody += `<td class="${fits ? 'ok' : 'warn'}">${fits ? '✓' : '✗ OOM'}</td>`;
-      pBody += `</tr>`;
-    });
-  });
-  document.querySelector("#perfTable tbody").innerHTML = pBody;
-}
+      let pBody = "";
+      MODELS.forEach(m => {
+        const mem = memoryFootprint(m, conc, ctx);
+        GPUS.forEach(g => {
+          const n = minGpus(mem, g);
+          const pf = prefillTimePerToken(m, g);
+          const tp = tpot(m, g);
+          const ttft = pf + tp / 1000;
+          const e2e = e2eLatency(pf, tp, isl, osl);
+          const thru = e2e > 0 ? osl / e2e : 0;
+          const maxKv = Math.floor(kvCacheTokens(g, m));
 
-// Run on load
-calculate();
-</script>
+          pBody += `<tr>`;
+          pBody += `<td>${modelLabel(m)}</td>`;
+          pBody += `<td>${g.name}</td>`;
+          pBody += `<td class="${n === 1 ? 'ok' : ''}">${n === 1 ? '1 GPU' : n + ' GPUs'}</td>`;
+          pBody += `<td>${fmt(pf, 3, " ms")}</td>`;
+          pBody += `<td>${fmt(tp, 3, " ms")}</td>`;
+          pBody += `<td>${fmt(ttft, 3, " s")}</td>`;
+          pBody += `<td>${fmt(e2e, 1, " s")}</td>`;
+          pBody += `<td>${fmt(thru, 1, " tok/s")}</td>`;
+          pBody += `<td>${maxKv.toLocaleString()}</td>`;
+          pBody += `</tr>`;
+        });
+      });
+      document.querySelector("#perfTable tbody").innerHTML = pBody;
+    }
+
+    // Run on load
+    calculate();
+  </script>
 </body>
+
 </html>
