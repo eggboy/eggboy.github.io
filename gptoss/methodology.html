@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLM Sizing Guide — Methodology &amp; Data Sources</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text2: #8b949e;
+      --accent: #58a6ff;
+      --green: #3fb950;
+      --yellow: #d29922;
+      --red: #f85149;
+      --radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      padding: 24px;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    h1 { font-size: 1.8rem; margin-bottom: 4px; }
+    h2 { font-size: 1.3rem; color: var(--accent); margin: 36px 0 12px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { font-size: 1.05rem; color: var(--text); margin: 20px 0 8px; }
+
+    .subtitle { color: var(--text2); font-size: 0.95rem; margin-bottom: 24px; }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .back-link { display: inline-block; margin-bottom: 20px; font-size: 0.9rem; }
+
+    p, li { font-size: 0.92rem; margin-bottom: 8px; }
+    ul, ol { margin: 8px 0 16px 24px; }
+
+    code {
+      background: var(--surface);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      border: 1px solid var(--border);
+    }
+
+    .formula-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin: 12px 0 20px;
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 0.88rem;
+      line-height: 1.8;
+      overflow-x: auto;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin: 12px 0 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      margin: 12px 0 20px;
+    }
+    th {
+      background: var(--surface);
+      color: var(--accent);
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 2px solid var(--border);
+      white-space: nowrap;
+    }
+    td {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    tr:hover td { background: rgba(88,166,255,0.04); }
+
+    .tag { display: inline-block; font-size: 0.72rem; padding: 1px 6px; border-radius: 10px; font-weight: 600; vertical-align: middle; }
+    .tag-moe { background: rgba(210,153,34,0.15); color: var(--yellow); }
+    .tag-dense { background: rgba(63,185,80,0.12); color: var(--green); }
+    .tag-src { background: rgba(88,166,255,0.12); color: var(--accent); font-size: 0.75rem; padding: 2px 8px; }
+
+    .note {
+      background: rgba(88,166,255,0.06);
+      border-left: 3px solid var(--accent);
+      padding: 12px 16px;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      margin: 12px 0 20px;
+      font-size: 0.88rem;
+    }
+
+    .warn-note {
+      background: rgba(248,81,73,0.06);
+      border-left: 3px solid var(--red);
+      padding: 12px 16px;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      margin: 12px 0 20px;
+      font-size: 0.88rem;
+    }
+
+    footer {
+      margin-top: 48px;
+      color: var(--text2);
+      font-size: 0.8rem;
+      text-align: center;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+
+    @media (max-width: 600px) {
+      body { padding: 12px; }
+      .formula-block { font-size: 0.78rem; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <a class="back-link" href="index.html">&larr; Back to Calculator</a>
+
+  <h1>Methodology &amp; Data Sources</h1>
+  <p class="subtitle">How the LLM Sizing Guide calculates memory, latency, and throughput — and where the numbers come from.</p>
+
+  <!-- ─────────────────────── TABLE OF CONTENTS ─────────────────────── -->
+  <div class="card">
+    <strong>Contents</strong>
+    <ol>
+      <li><a href="#data-sources">Data Sources</a>
+        <ul>
+          <li><a href="#model-sources">Model Specifications</a></li>
+          <li><a href="#gpu-sources">GPU Specifications</a></li>
+        </ul>
+      </li>
+      <li><a href="#key-concepts">Key Concepts</a></li>
+      <li><a href="#formulas">Sizing Formulas</a>
+        <ul>
+          <li><a href="#f-weights">Weight Memory</a></li>
+          <li><a href="#f-kvcache">KV Cache</a></li>
+          <li><a href="#f-memory">Total Memory Footprint</a></li>
+          <li><a href="#f-mingpu">Minimum GPUs</a></li>
+          <li><a href="#f-prefill">Prefill Time per Token</a></li>
+          <li><a href="#f-tpot">TPOT (Time per Output Token)</a></li>
+          <li><a href="#f-ttft">TTFT (Time to First Token)</a></li>
+          <li><a href="#f-e2e">End-to-End Latency</a></li>
+          <li><a href="#f-throughput">Throughput</a></li>
+        </ul>
+      </li>
+      <li><a href="#moe">Mixture-of-Experts (MoE) Handling</a></li>
+      <li><a href="#limitations">Limitations &amp; Caveats</a></li>
+    </ol>
+  </div>
+
+  <!-- ─────────────────────── 1. DATA SOURCES ─────────────────────── -->
+  <h2 id="data-sources">1. Data Sources</h2>
+
+  <h3 id="model-sources">Model Specifications</h3>
+  <p>Architecture parameters (layers, hidden size, attention heads, KV heads, context window, expert counts) were sourced from official model cards and configuration files:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Model</th>
+        <th>Type</th>
+        <th>Primary Source</th>
+        <th>Verified From</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Llama-3.1-8B <span class="tag tag-dense">Dense</span></td>
+        <td>8B params</td>
+        <td>
+          <a href="https://huggingface.co/meta-llama/Llama-3.1-8B" target="_blank">HuggingFace Model Card</a>
+        </td>
+        <td>
+          <a href="https://github.com/meta-llama/llama-models/blob/main/models/llama3_1/MODEL_CARD.md" target="_blank">GitHub Model Card</a>,
+          <a href="https://ai.meta.com/blog/meta-llama-3-1/" target="_blank">Meta Blog Post</a>
+        </td>
+      </tr>
+      <tr>
+        <td>Llama-3.1-70B <span class="tag tag-dense">Dense</span></td>
+        <td>70B params</td>
+        <td>
+          <a href="https://huggingface.co/meta-llama/Llama-3.1-70B" target="_blank">HuggingFace Model Card</a>
+        </td>
+        <td>
+          <a href="https://github.com/meta-llama/llama-models/blob/main/models/llama3_1/MODEL_CARD.md" target="_blank">GitHub Model Card</a>,
+          <a href="https://ai.meta.com/blog/meta-llama-3-1/" target="_blank">Meta Blog Post</a>
+        </td>
+      </tr>
+      <tr>
+        <td>Mistral-7B-v0.3 <span class="tag tag-dense">Dense</span></td>
+        <td>7B params</td>
+        <td>
+          <a href="https://huggingface.co/mistralai/Mistral-7B-v0.3" target="_blank">HuggingFace Model Card</a>
+        </td>
+        <td>
+          <a href="https://huggingface.co/mistralai/Mistral-7B-v0.3/blob/main/config.json" target="_blank">config.json</a>
+        </td>
+      </tr>
+      <tr>
+        <td>Qwen2.5-14B <span class="tag tag-dense">Dense</span></td>
+        <td>14.7B params</td>
+        <td>
+          <a href="https://huggingface.co/Qwen/Qwen2.5-14B" target="_blank">HuggingFace Model Card</a>
+        </td>
+        <td>
+          <a href="https://huggingface.co/Qwen/Qwen2.5-14B/blob/main/config.json" target="_blank">config.json</a>,
+          <a href="https://qwenlm.github.io/blog/qwen2.5/" target="_blank">Qwen Blog</a>
+        </td>
+      </tr>
+      <tr>
+        <td>GPT-oss-120B <span class="tag tag-moe">MoE</span></td>
+        <td>117B total, 5.1B active</td>
+        <td>
+          <a href="https://huggingface.co/openai/gpt-oss-120b/raw/main/original/config.json" target="_blank">HuggingFace config.json</a>
+        </td>
+        <td>
+          <a href="https://github.com/openai/gpt-oss" target="_blank">GitHub openai/gpt-oss</a> (README &amp; model code)
+        </td>
+      </tr>
+      <tr>
+        <td>GPT-oss-20B <span class="tag tag-moe">MoE</span></td>
+        <td>21B total, 3.6B active</td>
+        <td>
+          <a href="https://huggingface.co/openai/gpt-oss-20b/raw/main/original/config.json" target="_blank">HuggingFace config.json</a>
+        </td>
+        <td>
+          <a href="https://github.com/openai/gpt-oss" target="_blank">GitHub openai/gpt-oss</a> (README &amp; model code)
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Model Architecture Details Used in Calculator</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Model</th>
+        <th>Params (B)</th>
+        <th>Hidden Size</th>
+        <th>Attn Heads</th>
+        <th>KV Heads</th>
+        <th>Head Dim</th>
+        <th>Layers</th>
+        <th>Max Context</th>
+        <th>Experts</th>
+        <th>Active Experts</th>
+        <th>Weight Size</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Llama-3.1-8B</td><td>8</td><td>4096</td><td>32</td><td>8</td><td>128</td><td>32</td><td>131,072</td><td>—</td><td>—</td><td>16 GB</td></tr>
+      <tr><td>Llama-3.1-70B</td><td>70</td><td>8192</td><td>64</td><td>8</td><td>128</td><td>80</td><td>131,072</td><td>—</td><td>—</td><td>140 GB</td></tr>
+      <tr><td>Mistral-7B-v0.3</td><td>7</td><td>4096</td><td>32</td><td>8</td><td>128</td><td>32</td><td>32,768</td><td>—</td><td>—</td><td>14 GB</td></tr>
+      <tr><td>Qwen2.5-14B</td><td>14.7</td><td>5120</td><td>40</td><td>8</td><td>128</td><td>48</td><td>131,072</td><td>—</td><td>—</td><td>29.4 GB</td></tr>
+      <tr><td>GPT-oss-120B</td><td>117 (5.1 active)</td><td>2880</td><td>64</td><td>8</td><td>64</td><td>36</td><td>131,072</td><td>128</td><td>4</td><td>~63 GB</td></tr>
+      <tr><td>GPT-oss-20B</td><td>21 (3.6 active)</td><td>2880</td><td>64</td><td>8</td><td>64</td><td>24</td><td>131,072</td><td>32</td><td>4</td><td>~14 GB</td></tr>
+    </tbody>
+  </table>
+
+  <h3 id="gpu-sources">GPU Specifications</h3>
+  <p>GPU specs (FP16 TFLOPS, memory capacity, HBM bandwidth) are sourced from official vendor datasheets and product pages:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>GPU</th>
+        <th>FP16 TFLOPS</th>
+        <th>Memory</th>
+        <th>Bandwidth</th>
+        <th>Source</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>NVIDIA L40s</td>
+        <td>362</td>
+        <td>48 GB GDDR6</td>
+        <td>864 GB/s</td>
+        <td>
+          <a href="https://www.nvidia.com/en-us/data-center/l40s/" target="_blank">NVIDIA L40s Datasheet</a>
+        </td>
+      </tr>
+      <tr>
+        <td>NVIDIA H100 NVL</td>
+        <td>835.5</td>
+        <td>94 GB HBM3</td>
+        <td>3,900 GB/s</td>
+        <td>
+          <a href="https://www.nvidia.com/en-us/data-center/h100/" target="_blank">NVIDIA H100 Datasheet</a>,
+          <a href="https://resources.nvidia.com/en-us-tensor-core" target="_blank">Tensor Core GPU Whitepaper</a>
+        </td>
+      </tr>
+      <tr>
+        <td>NVIDIA H200 NVL</td>
+        <td>835.5</td>
+        <td>141 GB HBM3e</td>
+        <td>4,800 GB/s</td>
+        <td>
+          <a href="https://www.nvidia.com/en-us/data-center/h200/" target="_blank">NVIDIA H200 Datasheet</a>
+        </td>
+      </tr>
+      <tr>
+        <td>AMD Instinct MI300X</td>
+        <td>1,307</td>
+        <td>192 GB HBM3</td>
+        <td>5,300 GB/s</td>
+        <td>
+          <a href="https://www.amd.com/en/products/accelerators/instinct/mi300/mi300x.html" target="_blank">AMD MI300X Product Page</a>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <strong>Note on FP16 TFLOPS:</strong> We use the <em>with sparsity</em> (structured sparsity) FP16 TFLOPS for NVIDIA GPUs where available, as this reflects the theoretical peak for Tensor Core workloads. Actual achievable TFLOPS depends on the serving framework and kernel efficiency.
+  </div>
+
+  <!-- ─────────────────────── 2. KEY CONCEPTS ─────────────────────── -->
+  <h2 id="key-concepts">2. Key Concepts</h2>
+
+  <h3>Weight Memory</h3>
+  <p>The model's parameters (weights) must reside in GPU memory (VRAM). For FP16/BF16 precision, each parameter occupies <strong>2 bytes</strong>. Quantized models use fewer bytes — for example, MXFP4 uses just <strong>0.5 bytes per parameter</strong> for quantized layers.</p>
+
+  <h3>KV Cache</h3>
+  <p>During autoregressive generation, the <strong>Key</strong> and <strong>Value</strong> tensors from self-attention are cached to avoid recomputation. The KV cache grows linearly with sequence length and concurrent requests. It is often the dominant memory consumer for long-context workloads.</p>
+
+  <h3>Prefill vs. Decode</h3>
+  <p>LLM inference has two phases:</p>
+  <ul>
+    <li><strong>Prefill</strong> (prompt processing): All input tokens are processed in parallel. This phase is <em>compute-bound</em> — it depends on GPU TFLOPS.</li>
+    <li><strong>Decode</strong> (token generation): Tokens are generated one at a time. This phase is <em>memory-bandwidth-bound</em> — it depends on how fast weights can be read from HBM.</li>
+  </ul>
+
+  <h3>Grouped-Query Attention (GQA)</h3>
+  <p>Modern models use GQA where multiple query heads share fewer KV heads. This reduces KV cache size significantly. For example, Llama-3.1-70B has 64 attention heads but only 8 KV heads — an 8× reduction in KV cache compared to full multi-head attention.</p>
+
+  <!-- ─────────────────────── 3. FORMULAS ─────────────────────── -->
+  <h2 id="formulas">3. Sizing Formulas</h2>
+
+  <h3 id="f-weights">Weight Memory</h3>
+  <p>For standard FP16/BF16 dense models:</p>
+  <div class="formula-block">
+Weight Memory (GB) = params_billion × 2
+  </div>
+  <p>For models with mixed-precision or quantization (e.g. GPT-oss with MXFP4), an explicit override is used based on actual measured model size:</p>
+  <div class="formula-block">
+<em>GPT-oss-120B example:</em>
+  Expert weights (MXFP4):  ~114B params × 0.5 bytes/param = ~57 GB
+  Non-expert weights (BF16): ~3B params × 2 bytes/param   = ~6 GB
+  Total ≈ 63 GB  (verified: fits a single 80 GB H100)
+  </div>
+
+  <h3 id="f-kvcache">KV Cache Size per Token</h3>
+  <div class="formula-block">
+KV per token (bytes) = 2 × n_layers × n_kv_heads × head_dim × 2
+                       ↑                                       ↑
+                       K and V                                 FP16 = 2 bytes
+  </div>
+  <p>The <code>head_dim</code> is usually <code>d_model / n_heads</code>, but some models (like GPT-oss) specify it explicitly when the hidden size doesn't divide evenly.</p>
+
+  <h3 id="f-memory">Total Memory Footprint</h3>
+  <div class="formula-block">
+Total Memory (GB) = Weight Memory
+                  + KV_per_token × context_window × concurrent_requests
+
+<em>where:</em> context_window = input_tokens + output_tokens
+  </div>
+
+  <div class="note">
+    This is a <strong>worst-case</strong> estimate, assuming all concurrent requests use the full context window simultaneously. Real serving engines use paged attention and dynamic memory management for better utilization.
+  </div>
+
+  <h3 id="f-mingpu">Minimum GPUs</h3>
+  <div class="formula-block">
+Min GPUs = ⌈ Total Memory / GPU Memory ⌉
+  </div>
+  <p>This indicates how many GPUs of a given type are needed purely for memory capacity. In practice, multi-GPU inference also requires tensor parallelism or pipeline parallelism communication overhead.</p>
+
+  <h3 id="f-prefill">Prefill Time per Token</h3>
+  <p>Prefill is <em>compute-bound</em>. The time to process each input token:</p>
+  <div class="formula-block">
+Prefill time/token (ms) = (2 × compute_params_billion) / GPU_FP16_TFLOPS
+  </div>
+  <p>The factor of 2 accounts for the multiply-accumulate operations (1 multiply + 1 add per parameter). For MoE models, <code>compute_params_billion</code> = the active parameters per token, not total parameters.</p>
+
+  <h3 id="f-tpot">TPOT — Time per Output Token</h3>
+  <p>Decode is <em>memory-bandwidth-bound</em>. Each generated token requires reading the model weights from HBM:</p>
+  <div class="formula-block">
+TPOT (ms) = (2 × compute_params_billion) / memory_bandwidth_GBps × 1000
+  </div>
+  <p>For MoE models, only the active expert weights are read per token, so we use active parameters.</p>
+
+  <h3 id="f-ttft">TTFT — Time to First Token</h3>
+  <div class="formula-block">
+TTFT (s) ≈ prefill_time_per_token + TPOT / 1000
+  </div>
+  <p>This approximation assumes the first token is produced after processing the full prompt plus one decode step.</p>
+
+  <h3 id="f-e2e">End-to-End Latency</h3>
+  <div class="formula-block">
+E2E Latency (s) = (input_tokens × prefill_time + output_tokens × TPOT) / 1000
+  </div>
+  <p>Total wall-clock time from sending the request to receiving the complete response.</p>
+
+  <h3 id="f-throughput">Throughput</h3>
+  <div class="formula-block">
+Throughput (tok/s) = output_tokens / E2E_latency
+  </div>
+  <p>This is the single-request output token rate. Actual serving throughput with batching will be higher.</p>
+
+  <!-- ─────────────────────── 4. MoE ─────────────────────── -->
+  <h2 id="moe">4. Mixture-of-Experts (MoE) Handling</h2>
+
+  <p>Mixture-of-Experts models like GPT-oss use a routing mechanism where each token is processed by only a subset of "expert" sub-networks:</p>
+
+  <div class="card">
+    <h3>How MoE Affects Sizing</h3>
+    <table>
+      <thead>
+        <tr><th>Aspect</th><th>Dense Model</th><th>MoE Model</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Memory</strong></td>
+          <td>All parameters in VRAM</td>
+          <td>All parameters in VRAM (all experts must be loaded)</td>
+        </tr>
+        <tr>
+          <td><strong>Compute per token</strong></td>
+          <td>All parameters</td>
+          <td>Only active expert parameters (e.g., 5.1B out of 117B for GPT-oss-120B)</td>
+        </tr>
+        <tr>
+          <td><strong>Bandwidth per token</strong></td>
+          <td>Read all weights from HBM</td>
+          <td>Read only active expert weights from HBM</td>
+        </tr>
+        <tr>
+          <td><strong>Net effect</strong></td>
+          <td>—</td>
+          <td>Much faster inference despite larger total model size</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>GPT-oss MXFP4 Quantization</h3>
+  <p>GPT-oss models use <strong>MXFP4</strong> (Microscaling 4-bit floating point) quantization for the expert MLP weights, while keeping the rest in BF16. This is critical for accurate sizing:</p>
+
+  <div class="formula-block">
+<em>GPT-oss-120B weight breakdown:</em>
+  117B total parameters
+  ├── ~114B in expert MLP weights → MXFP4 (0.5 bytes/param) = ~57 GB
+  └── ~3B in shared/non-expert weights → BF16 (2 bytes/param) = ~6 GB
+  Total weight memory ≈ 63 GB
+
+<em>GPT-oss-20B weight breakdown:</em>
+  21B total parameters
+  ├── ~19B in expert MLP weights → MXFP4 (0.5 bytes/param) = ~9.5 GB
+  └── ~2B in shared/non-expert weights → BF16 (2 bytes/param) = ~4 GB
+  Total weight memory ≈ 14 GB
+  </div>
+
+  <div class="note">
+    <strong>Verification:</strong> OpenAI states GPT-oss-120B is designed to run on a single H100 GPU (80 GB). With 63 GB weight memory, this leaves ~17 GB for KV cache and overhead — consistent with the claim.
+  </div>
+
+  <!-- ─────────────────────── 5. LIMITATIONS ─────────────────────── -->
+  <h2 id="limitations">5. Limitations &amp; Caveats</h2>
+
+  <div class="warn-note">
+    <strong>These are theoretical first-order estimates.</strong> Real-world performance will differ due to the factors below.
+  </div>
+
+  <ul>
+    <li><strong>Serving framework overhead:</strong> vLLM, TensorRT-LLM, SGLang, etc. each have different memory overhead for scheduling, paged attention metadata, CUDA graphs, and kernel launcher bookkeeping.</li>
+    <li><strong>Continuous batching:</strong> The calculator models single-request latency. Real serving engines batch multiple requests, which improves throughput but may increase individual latency.</li>
+    <li><strong>Tensor parallelism overhead:</strong> When using multiple GPUs, communication overhead (NVLink, InfiniBand) is not modeled. The "Min GPUs" column only reflects memory capacity.</li>
+    <li><strong>Activation memory:</strong> During prefill, intermediate activations temporarily consume VRAM. This is not included in the static memory footprint.</li>
+    <li><strong>System memory:</strong> CUDA context, driver overhead, and the serving framework itself consume a portion of VRAM (typically 1–3 GB).</li>
+    <li><strong>Quantization accuracy:</strong> The 63 GB / 14 GB estimates for GPT-oss models are derived from the MXFP4 + BF16 breakdown. Actual checkpoint file sizes may differ slightly due to metadata, padding, and serialization format.</li>
+    <li><strong>KV cache precision:</strong> We assume FP16 KV cache. Some frameworks support INT8 or FP8 KV cache, which halves this cost.</li>
+    <li><strong>Speculative decoding, prefix caching, and other optimizations</strong> are not modeled.</li>
+  </ul>
+
+  <!-- ─────────────────────── REFERENCES ─────────────────────── -->
+  <h2>References</h2>
+  <ol>
+    <li><a href="https://github.com/openai/gpt-oss" target="_blank">openai/gpt-oss</a> — Official GPT-oss repository with model architecture, MXFP4 details, and training methodology.</li>
+    <li><a href="https://huggingface.co/openai/gpt-oss-120b/raw/main/original/config.json" target="_blank">GPT-oss-120B config.json</a> — Exact model architecture configuration (layers, heads, experts, dimensions).</li>
+    <li><a href="https://huggingface.co/openai/gpt-oss-20b/raw/main/original/config.json" target="_blank">GPT-oss-20B config.json</a> — Exact model architecture configuration.</li>
+    <li><a href="https://huggingface.co/meta-llama/Llama-3.1-8B" target="_blank">Llama-3.1-8B Model Card</a> — Meta's model card with architecture details.</li>
+    <li><a href="https://huggingface.co/meta-llama/Llama-3.1-70B" target="_blank">Llama-3.1-70B Model Card</a> — Meta's model card with architecture details.</li>
+    <li><a href="https://ai.meta.com/blog/meta-llama-3-1/" target="_blank">Meta Llama 3.1 Blog Post</a> — Official announcement with model family details.</li>
+    <li><a href="https://huggingface.co/mistralai/Mistral-7B-v0.3" target="_blank">Mistral-7B-v0.3 Model Card</a> — Mistral AI model card.</li>
+    <li><a href="https://huggingface.co/Qwen/Qwen2.5-14B" target="_blank">Qwen2.5-14B Model Card</a> — Alibaba Cloud model card.</li>
+    <li><a href="https://www.nvidia.com/en-us/data-center/l40s/" target="_blank">NVIDIA L40s Datasheet</a></li>
+    <li><a href="https://www.nvidia.com/en-us/data-center/h100/" target="_blank">NVIDIA H100 Datasheet</a></li>
+    <li><a href="https://www.nvidia.com/en-us/data-center/h200/" target="_blank">NVIDIA H200 Datasheet</a></li>
+    <li><a href="https://www.amd.com/en/products/accelerators/instinct/mi300/mi300x.html" target="_blank">AMD MI300X Product Page</a></li>
+    <li>Kipply, <a href="https://kipp.ly/transformer-inference-arithmetic/" target="_blank"><em>Transformer Inference Arithmetic</em></a> — foundational analysis of compute-bound vs. bandwidth-bound LLM inference.</li>
+    <li>Pope et al., <a href="https://arxiv.org/abs/2211.05102" target="_blank"><em>Efficiently Scaling Transformer Inference</em></a> (2022) — Google's analysis of LLM inference performance.</li>
+  </ol>
+
+  <footer>
+    <a href="index.html">LLM Sizing Guide Calculator</a> ·
+    <a href="https://github.com/qoofyk/LLM_Sizing_Guide" target="_blank">GitHub Repository</a>
+  </footer>
+
+</body>
+</html>
