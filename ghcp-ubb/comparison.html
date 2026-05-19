@@ -1,0 +1,1687 @@
+<!DOCTYPE html>
+<html lang="en" data-color-mode="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GitHub Copilot vs Claude Code — Pricing Comparison (May 2026)</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  /* ============================================================
+     GitHub Primer Design System — Tokens
+     ============================================================ */
+  :root[data-color-mode="light"] {
+    --bgColor-default: #ffffff;
+    --bgColor-muted: #f6f8fa;
+    --bgColor-inset: #f6f8fa;
+    --bgColor-emphasis: #25292e;
+    --fgColor-default: #1f2328;
+    --fgColor-muted: #59636e;
+    --fgColor-disabled: #818b98;
+    --fgColor-accent: #0969da;
+    --fgColor-success: #1a7f37;
+    --fgColor-danger: #d1242f;
+    --fgColor-attention: #9a6700;
+    --fgColor-done: #8250df;
+    --fgColor-severe: #bc4c00;
+    --fgColor-sponsors: #bf3989;
+    --borderColor-default: #d1d9e0;
+    --borderColor-muted: #d1d9e0b3;
+    --borderColor-emphasis: #818b98;
+    --bgColor-open: #dafbe1;
+    --bgColor-closed: #ffebe9;
+    --bgColor-merged: #fbefff;
+    --bgColor-draft: #818b981f;
+    --bgColor-attention-subtle: #fff8c5;
+    --bgColor-severe-subtle: #fff1e5;
+    --bgColor-accent-subtle: #ddf4ff;
+    --shadow-resting-small: 0 1px 1px 0 rgba(31, 35, 40, 0.04), 0 1px 2px 0 rgba(31, 35, 40, 0.03);
+    --shadow-resting-medium: 0 1px 1px 0 rgba(37, 41, 46, 0.1), 0 3px 6px 0 rgba(37, 41, 46, 0.12);
+    --shadow-floating-small: 0 0 0 1px rgba(209, 217, 224, 0.5), 0 6px 12px -3px rgba(37, 41, 46, 0.04), 0 6px 18px 0 rgba(37, 41, 46, 0.12);
+    --color-copilot: #1f2328;
+    --color-claude: #c1502e;
+  }
+
+  :root[data-color-mode="dark"] {
+    --bgColor-default: #0d1117;
+    --bgColor-muted: #161b22;
+    --bgColor-inset: #010409;
+    --bgColor-emphasis: #6e7681;
+    --fgColor-default: #e6edf3;
+    --fgColor-muted: #8b949e;
+    --fgColor-disabled: #6e7681;
+    --fgColor-accent: #4493f8;
+    --fgColor-success: #3fb950;
+    --fgColor-danger: #f85149;
+    --fgColor-attention: #d29922;
+    --fgColor-done: #ab7df8;
+    --fgColor-severe: #db6d28;
+    --fgColor-sponsors: #db61a2;
+    --borderColor-default: #30363d;
+    --borderColor-muted: #30363db3;
+    --borderColor-emphasis: #6e7681;
+    --bgColor-open: #033a16;
+    --bgColor-closed: #67060c;
+    --bgColor-merged: #3c1e70;
+    --bgColor-draft: #6e768133;
+    --bgColor-attention-subtle: #341a00;
+    --bgColor-severe-subtle: #3a1f00;
+    --bgColor-accent-subtle: #0c2d6b;
+    --shadow-resting-small: 0 1px 1px 0 rgba(1, 4, 9, 0.4);
+    --shadow-resting-medium: 0 1px 1px 0 rgba(1, 4, 9, 0.6), 0 3px 6px 0 rgba(1, 4, 9, 0.6);
+    --shadow-floating-small: 0 0 0 1px #30363d, 0 6px 18px 0 rgba(1, 4, 9, 0.6);
+    --color-copilot: #e6edf3;
+    --color-claude: #e08756;
+  }
+
+  :root {
+    --fontStack-sansSerif: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans',
+                            Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+    --fontStack-monospace: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas,
+                            'Liberation Mono', monospace;
+    --base-size-4: 0.25rem;
+    --base-size-8: 0.5rem;
+    --base-size-12: 0.75rem;
+    --base-size-16: 1rem;
+    --base-size-24: 1.5rem;
+    --base-size-32: 2rem;
+    --base-size-48: 3rem;
+    --borderRadius-small: 3px;
+    --borderRadius-medium: 6px;
+    --borderRadius-large: 12px;
+    --borderRadius-full: 50%;
+  }
+
+  /* ============================================================
+     Base & Layout
+     ============================================================ */
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bgColor-default);
+    color: var(--fgColor-default);
+    font-family: var(--fontStack-sansSerif);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+
+  /* ============================================================
+     Header
+     ============================================================ */
+  .app-header {
+    background: var(--bgColor-emphasis);
+    color: #ffffff;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--borderColor-default);
+  }
+  .app-header__brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 600;
+    font-size: 16px;
+  }
+  .app-header__brand svg { fill: #ffffff; }
+  .app-header__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .theme-toggle {
+    background: transparent;
+    border: 1px solid #ffffff33;
+    color: #ffffff;
+    padding: 6px 12px;
+    border-radius: var(--borderRadius-medium);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: inherit;
+  }
+  .theme-toggle:hover { background: #ffffff14; }
+
+  /* ============================================================
+     Page hero
+     ============================================================ */
+  .hero {
+    border-bottom: 1px solid var(--borderColor-default);
+    padding: 24px 0 32px;
+    margin-bottom: 24px;
+  }
+  .hero__eyebrow {
+    color: var(--fgColor-muted);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin: 0 0 8px;
+  }
+  .hero__title {
+    font-size: 40px;
+    line-height: 1.25;
+    font-weight: 500;
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+  }
+  .hero__subtitle {
+    font-size: 20px;
+    font-weight: 400;
+    color: var(--fgColor-muted);
+    margin: 0 0 16px;
+    line-height: 1.4;
+  }
+  .hero__meta {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+
+  /* ============================================================
+     Sections & typography
+     ============================================================ */
+  section { margin-bottom: 40px; }
+  h2 {
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0 0 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--borderColor-muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  h2 .section-num {
+    font-family: var(--fontStack-monospace);
+    color: var(--fgColor-muted);
+    font-weight: 400;
+    font-size: 18px;
+  }
+  h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 24px 0 12px;
+  }
+  p { margin: 0 0 12px; }
+  .lead {
+    font-size: 16px;
+    color: var(--fgColor-muted);
+    margin-bottom: 16px;
+  }
+
+  /* ============================================================
+     Cards & grid
+     ============================================================ */
+  .grid {
+    display: grid;
+    gap: 16px;
+  }
+  .grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .grid--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  @media (max-width: 900px) {
+    .grid--2, .grid--3, .grid--4 { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: var(--bgColor-default);
+    border: 1px solid var(--borderColor-default);
+    border-radius: var(--borderRadius-medium);
+    padding: 16px;
+    transition: border-color 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .card:hover { border-color: var(--borderColor-emphasis); }
+  .card--muted { background: var(--bgColor-muted); }
+  .card--accent { border-left: 4px solid var(--fgColor-accent); }
+  .card--danger { border-left: 4px solid var(--fgColor-danger); }
+  .card--success { border-left: 4px solid var(--fgColor-success); }
+  .card--attention { border-left: 4px solid var(--fgColor-attention); }
+  .card--done { border-left: 4px solid var(--fgColor-done); }
+
+  .card__title {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0 0 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card__body {
+    font-size: 14px;
+    color: var(--fgColor-default);
+  }
+  .card__body p:last-child { margin-bottom: 0; }
+  .card__meta {
+    font-size: 12px;
+    color: var(--fgColor-muted);
+    margin-top: 8px;
+  }
+
+  /* Big stat card */
+  .stat {
+    text-align: left;
+  }
+  .stat__label {
+    font-size: 12px;
+    color: var(--fgColor-muted);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 4px;
+  }
+  .stat__value {
+    font-size: 32px;
+    font-weight: 600;
+    line-height: 1.2;
+    margin-bottom: 4px;
+    font-feature-settings: "tnum";
+  }
+  .stat__sub {
+    font-size: 12px;
+    color: var(--fgColor-muted);
+  }
+
+  /* ============================================================
+     Badges & labels (Primer)
+     ============================================================ */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 2em;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 18px;
+    background: var(--bgColor-draft);
+    color: var(--fgColor-muted);
+  }
+  .badge svg { width: 12px; height: 12px; }
+  .badge--accent { background: var(--bgColor-accent-subtle); color: var(--fgColor-accent); }
+  .badge--success { background: var(--bgColor-open); color: var(--fgColor-success); }
+  .badge--danger { background: var(--bgColor-closed); color: var(--fgColor-danger); }
+  .badge--attention { background: var(--bgColor-attention-subtle); color: var(--fgColor-attention); }
+  .badge--done { background: var(--bgColor-merged); color: var(--fgColor-done); }
+  .badge--severe { background: var(--bgColor-severe-subtle); color: var(--fgColor-severe); }
+
+  /* Vendor tag used in gotcha cards */
+  .vendor-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+    padding: 1px 8px;
+    border-radius: 2em;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 16px;
+    letter-spacing: 0.01em;
+    border: 1px solid var(--borderColor-default);
+    background: var(--bgColor-muted);
+    color: var(--fgColor-muted);
+    white-space: nowrap;
+  }
+  .vendor-tag--copilot { color: var(--fgColor-accent); border-color: var(--bgColor-accent-subtle); background: var(--bgColor-accent-subtle); }
+  .vendor-tag--claude  { color: var(--fgColor-done);   border-color: var(--bgColor-merged);        background: var(--bgColor-merged); }
+  .vendor-tag--both    { color: var(--fgColor-muted);  }
+
+  /* Subsection heading inside a section */
+  .subhead {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--fgColor-muted);
+    margin: 24px 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .subhead::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--borderColor-muted);
+  }
+  .subhead:first-child { margin-top: 0; }
+
+  /* state pills (like Open/Closed/Merged) */
+  .state {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 2em;
+    font-size: 12px;
+    font-weight: 500;
+    color: #ffffff;
+  }
+  .state--open { background: #1f883d; }
+  .state--closed { background: #cf222e; }
+  .state--merged { background: #8250df; }
+  .state--draft { background: #59636e; }
+  .state svg { width: 12px; height: 12px; fill: currentColor; }
+
+  /* ============================================================
+     Tables
+     ============================================================ */
+  .table-wrap {
+    border: 1px solid var(--borderColor-default);
+    border-radius: var(--borderRadius-medium);
+    overflow: hidden;
+    overflow-x: auto;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  th, td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--borderColor-muted);
+    vertical-align: top;
+  }
+  th {
+    background: var(--bgColor-muted);
+    font-weight: 600;
+    color: var(--fgColor-default);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+  tr:last-child td { border-bottom: 0; }
+  tbody tr:hover { background: var(--bgColor-muted); }
+  td.num {
+    font-family: var(--fontStack-monospace);
+    text-align: right;
+    font-feature-settings: "tnum";
+  }
+  td.strong { font-weight: 600; }
+  code, kbd {
+    font-family: var(--fontStack-monospace);
+    font-size: 0.85em;
+    background: var(--bgColor-muted);
+    padding: 2px 6px;
+    border-radius: var(--borderRadius-small);
+    color: var(--fgColor-default);
+  }
+
+  /* ============================================================
+     TL;DR list
+     ============================================================ */
+  .tldr {
+    background: var(--bgColor-muted);
+    border: 1px solid var(--borderColor-default);
+    border-radius: var(--borderRadius-medium);
+    padding: 20px 24px;
+  }
+  .tldr h2 {
+    border: 0;
+    padding: 0;
+    margin: 0 0 12px;
+    font-size: 16px;
+  }
+  .tldr ul {
+    margin: 0;
+    padding-left: 20px;
+  }
+  .tldr li {
+    margin-bottom: 8px;
+    line-height: 1.55;
+  }
+  .tldr li:last-child { margin-bottom: 0; }
+
+  /* ============================================================
+     Charts
+     ============================================================ */
+  .chart-box {
+    background: var(--bgColor-default);
+    border: 1px solid var(--borderColor-default);
+    border-radius: var(--borderRadius-medium);
+    padding: 16px;
+  }
+  .chart-box h3 {
+    margin: 0 0 4px;
+    font-size: 14px;
+  }
+  .chart-box .chart-caption {
+    color: var(--fgColor-muted);
+    font-size: 12px;
+    margin: 0 0 12px;
+  }
+  .chart-wrap { position: relative; height: 280px; }
+  .chart-wrap--tall { height: 360px; }
+
+  /* ============================================================
+     Timeline
+     ============================================================ */
+  .timeline {
+    position: relative;
+    padding-left: 24px;
+    border-left: 2px solid var(--borderColor-default);
+    margin: 0;
+  }
+  .timeline__item {
+    position: relative;
+    padding: 0 0 20px 16px;
+  }
+  .timeline__item:last-child { padding-bottom: 0; }
+  .timeline__dot {
+    position: absolute;
+    left: -25px;
+    top: 4px;
+    width: 12px;
+    height: 12px;
+    border-radius: var(--borderRadius-full);
+    background: var(--fgColor-accent);
+    border: 2px solid var(--bgColor-default);
+    box-shadow: 0 0 0 2px var(--borderColor-default);
+  }
+  .timeline__dot--success { background: var(--fgColor-success); }
+  .timeline__dot--danger { background: var(--fgColor-danger); }
+  .timeline__dot--attention { background: var(--fgColor-attention); }
+  .timeline__dot--done { background: var(--fgColor-done); }
+  .timeline__date {
+    font-family: var(--fontStack-monospace);
+    font-size: 12px;
+    color: var(--fgColor-muted);
+    font-weight: 500;
+  }
+  .timeline__title {
+    font-weight: 600;
+    margin: 2px 0 4px;
+  }
+  .timeline__body {
+    font-size: 13px;
+    color: var(--fgColor-muted);
+    line-height: 1.5;
+  }
+
+  /* ============================================================
+     Vendor heading row
+     ============================================================ */
+  .vs-row {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 24px;
+    background: var(--bgColor-muted);
+    border: 1px solid var(--borderColor-default);
+    border-radius: var(--borderRadius-medium);
+    padding: 20px 24px;
+    margin-bottom: 24px;
+  }
+  .vs-row__side {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 600;
+    font-size: 18px;
+  }
+  .vs-row__side--right { justify-content: flex-end; }
+  .vs-row__vs {
+    font-family: var(--fontStack-monospace);
+    color: var(--fgColor-muted);
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .vendor-dot {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--borderRadius-full);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 12px;
+    font-family: var(--fontStack-monospace);
+  }
+  .vendor-dot--copilot { background: var(--color-copilot); color: #ffffff; }
+  :root[data-color-mode="dark"] .vendor-dot--copilot { background: #6e7681; color: #0d1117; }
+  .vendor-dot--claude { background: var(--color-claude); }
+
+  /* ============================================================
+     Footer
+     ============================================================ */
+  .footer {
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid var(--borderColor-default);
+    color: var(--fgColor-muted);
+    font-size: 12px;
+  }
+  .footer a { color: var(--fgColor-accent); text-decoration: none; }
+  .footer a:hover { text-decoration: underline; }
+
+  /* helpers */
+  .mt-0 { margin-top: 0 !important; }
+  .mb-0 { margin-bottom: 0 !important; }
+  .text-muted { color: var(--fgColor-muted); }
+  .text-success { color: var(--fgColor-success); }
+  .text-danger { color: var(--fgColor-danger); }
+  .text-attention { color: var(--fgColor-attention); }
+  .text-accent { color: var(--fgColor-accent); }
+  .text-done { color: var(--fgColor-done); }
+  .mono { font-family: var(--fontStack-monospace); font-feature-settings: "tnum"; }
+
+  .pill-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  details {
+    border: 1px solid var(--borderColor-default);
+    border-radius: var(--borderRadius-medium);
+    padding: 12px 16px;
+    background: var(--bgColor-default);
+  }
+  details + details { margin-top: 8px; }
+  summary {
+    cursor: pointer;
+    font-weight: 600;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary::before {
+    content: "▶";
+    font-size: 10px;
+    color: var(--fgColor-muted);
+    transition: transform 150ms;
+  }
+  details[open] summary::before { transform: rotate(90deg); }
+  details > *:not(summary) { margin-top: 12px; }
+
+  /* Focus */
+  *:focus-visible {
+    outline: 2px solid var(--fgColor-accent);
+    outline-offset: -2px;
+    border-radius: var(--borderRadius-small);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     HEADER
+     ============================================================ -->
+<header class="app-header" role="banner">
+  <div class="app-header__brand">
+    <svg height="24" viewBox="0 0 16 16" width="24" aria-hidden="true"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>
+    <span>Copilot vs Claude Code · Pricing Brief</span>
+  </div>
+  <div class="app-header__actions">
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle color mode">
+      <svg id="themeIcon" height="14" viewBox="0 0 16 16" width="14" aria-hidden="true"><path d="M8 12.25A4.25 4.25 0 1 1 8 3.75a4.25 4.25 0 0 1 0 8.5ZM8 0a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0V.75A.75.75 0 0 1 8 0Zm0 13a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 8 13Zm8-5a.75.75 0 0 1-.75.75h-1.5a.75.75 0 0 1 0-1.5h1.5A.75.75 0 0 1 16 8Zm-13 0a.75.75 0 0 1-.75.75H.75a.75.75 0 0 1 0-1.5h1.5A.75.75 0 0 1 3 8Zm10.657-5.657a.75.75 0 0 1 0 1.061l-1.061 1.06a.751.751 0 0 1-1.06-1.06l1.06-1.061a.75.75 0 0 1 1.061 0Zm-9.193 9.193a.75.75 0 0 1 0 1.06l-1.06 1.061a.751.751 0 0 1-1.061-1.06l1.06-1.061a.75.75 0 0 1 1.061 0Zm9.193 2.121a.751.751 0 0 1-1.06 0l-1.061-1.06a.751.751 0 0 1 1.06-1.061l1.061 1.06a.75.75 0 0 1 0 1.061ZM4.464 4.465a.751.751 0 0 1-1.06 0L2.343 3.404a.75.75 0 0 1 1.06-1.06l1.061 1.06a.75.75 0 0 1 0 1.06Z"/></svg>
+      <span id="themeLabel">Dark</span>
+    </button>
+  </div>
+</header>
+
+<main class="container">
+
+  <!-- ============================================================
+       HERO
+       ============================================================ -->
+  <div class="hero">
+    <p class="hero__eyebrow">Comparison report · May 2026</p>
+    <h1 class="hero__title">GitHub Copilot vs Claude Code</h1>
+    <p class="hero__subtitle">
+      Both vendors are unwinding cheap automation arbitrage. Here's what changes on
+      <strong>June 1</strong> (Copilot AI Credits) and <strong>June 15</strong> (Claude programmatic billing),
+      and how to pick a plan.
+    </p>
+    <div class="hero__meta">
+      <span class="badge badge--accent">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M1.5 8a6.5 6.5 0 1 1 13 0 6.5 6.5 0 0 1-13 0ZM8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0Zm.75 4.75v3.5a.75.75 0 0 1-1.5 0v-3.5a.75.75 0 0 1 1.5 0Zm0 6.5a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"/></svg>
+        Pricing as of May 2026
+      </span>
+      <span class="badge badge--attention">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M4.47.22A.749.749 0 0 1 5 0h6c.199 0 .389.079.53.22l4.25 4.25c.141.14.22.331.22.53v6a.749.749 0 0 1-.22.53l-4.25 4.25A.749.749 0 0 1 11 16H5a.749.749 0 0 1-.53-.22L.22 11.53A.749.749 0 0 1 0 11V5c0-.199.079-.389.22-.53Zm.84 1.28L1.5 5.31v5.38l3.81 3.81h5.38l3.81-3.81V5.31L10.69 1.5ZM8 4a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"/></svg>
+        2 billing model changes in 14 days
+      </span>
+      <span class="badge">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v9.5A1.75 1.75 0 0 1 14.25 13H8.06l-2.573 2.573A1.458 1.458 0 0 1 3 14.543V13H1.75A1.75 1.75 0 0 1 0 11.25Z"/></svg>
+        10 sections, decision matrix included
+      </span>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       TL;DR
+       ============================================================ -->
+  <section class="tldr" aria-labelledby="tldr-title">
+    <h2 id="tldr-title">
+      <svg height="16" viewBox="0 0 16 16" width="16" aria-hidden="true"><path fill="currentColor" d="M8 16A8 8 0 1 1 8 0a8 8 0 0 1 0 16Zm.75-11.25v3.5a.75.75 0 0 1-1.5 0v-3.5a.75.75 0 0 1 1.5 0Zm0 6.5a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"/></svg>
+      Executive summary
+    </h2>
+    <ul>
+      <li>Anthropic's sticker prices are unchanged at <strong>$20 / $100 / $200</strong>, but from
+        <strong>June 15</strong> a separate <em>programmatic credit pool</em> meters <code>claude -p</code>,
+        Agent SDK, GitHub Actions, and third-party SDK apps. HN reports treat it as a de facto
+        <strong class="text-danger">10x–100x</strong> price hike for heavy headless users.</li>
+      <li>Both vendors are now metering automation — Copilot via <strong>AI Credits</strong> from
+        <strong>June 1</strong>, Anthropic via the programmatic pool from <strong>June 15</strong>.
+        The free-lunch era for headless coding agents is over on both sides.</li>
+      <li>Cheapest path to frontier models in the terminal for a solo dev:
+        <span class="badge badge--accent">Claude Pro · $20/mo</span> (includes Opus, Sonnet, Haiku).
+        Copilot Pro <strong>no longer includes Opus</strong>.</li>
+      <li>Cheapest GitHub-native IDE setup with light premium use:
+        <span class="badge badge--accent">Copilot Pro · $10/mo</span>, but GPT-5.5 still costs
+        <span class="mono">7.5×</span> and Opus 4.7 (on Pro+) costs <span class="mono">15×</span>.</li>
+      <li>For large context windows (500K+ tokens), <strong>Claude has a structural advantage</strong>.
+        GPT-5.5 jumps from <span class="mono">$5/$30</span> to <span class="mono">$10/$45</span>
+        above <strong>270K input tokens</strong>; Anthropic keeps standard rates to 1M.</li>
+      <li>Hidden gotcha on Copilot: cloud agent and code review also burn
+        <strong>GitHub Actions minutes</strong> — the bill is dual-metered.</li>
+    </ul>
+  </section>
+
+  <!-- ============================================================
+       SECTION 1 — Headline Pricing
+       ============================================================ -->
+  <section aria-labelledby="s1">
+    <h2 id="s1"><span class="section-num">01</span>Headline plan pricing</h2>
+    <p class="lead">Five tiers side by side, current May 2026.</p>
+
+    <div class="vs-row">
+      <div class="vs-row__side">
+        <span class="vendor-dot vendor-dot--copilot">GH</span>
+        GitHub Copilot
+      </div>
+      <div class="vs-row__vs">vs</div>
+      <div class="vs-row__side vs-row__side--right">
+        Claude Code
+        <span class="vendor-dot vendor-dot--claude">AN</span>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Tier</th>
+            <th>GitHub Copilot</th>
+            <th>Claude Code</th>
+            <th>Included / quirks</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="strong">Entry</td>
+            <td><strong>Pro</strong> · <span class="mono">$10/mo</span> · <span class="text-muted">300 premium req</span></td>
+            <td><strong>Pro</strong> · <span class="mono">$20/mo</span> or <span class="mono">$200/yr</span></td>
+            <td>Copilot Pro has unlimited completions, but <span class="text-danger"><strong>no Opus</strong></span> after Apr 20. Claude Pro bundles Opus, Sonnet, Haiku.</td>
+          </tr>
+          <tr>
+            <td class="strong">Mid</td>
+            <td><strong>Pro+</strong> · <span class="mono">$39/mo</span> · <span class="text-muted">1,500 premium req</span></td>
+            <td><strong>Max 5×</strong> · <span class="mono">$100/mo</span></td>
+            <td>Pro+ allows Opus 4.7 but at <span class="badge badge--danger">15× per turn</span>. Max 5× gives 5× Pro session quota + weekly caps.</td>
+          </tr>
+          <tr>
+            <td class="strong">Power</td>
+            <td><strong>Max</strong> · <span class="mono">$100/mo</span> · <span class="text-muted">20K AI Credits ($200 value)</span> <span class="badge badge--attention">June 1</span></td>
+            <td><strong>Max 20×</strong> · <span class="mono">$200/mo</span></td>
+            <td>Copilot Max is the new GitHub-native power tier under usage-based billing. Max 20× = 20× Pro session quota.</td>
+          </tr>
+          <tr>
+            <td class="strong">Team</td>
+            <td><strong>Business</strong> · <span class="mono">$19/seat/mo</span></td>
+            <td><strong>Team Std</strong> · <span class="mono">$20/seat annual</span> · <span class="mono">$25 mo</span></td>
+            <td>Business adds policy, audit logs, content exclusion. Team Std gives 1.25× Pro session quota.</td>
+          </tr>
+          <tr>
+            <td class="strong">Enterprise</td>
+            <td><strong>Enterprise</strong> · <span class="mono">$39/seat/mo</span></td>
+            <td><strong>Enterprise</strong> · <span class="mono">$20/seat + API usage</span></td>
+            <td>Copilot adds governance. Claude Enterprise's seat fee looks cheap but usage is fully metered on top.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="grid grid--3" style="margin-top: 16px;">
+      <div class="card card--accent">
+        <div class="card__title">
+          <svg height="16" viewBox="0 0 16 16" width="16" aria-hidden="true" fill="currentColor"><path d="M8 16A8 8 0 1 1 8 0a8 8 0 0 1 0 16Zm3.78-9.72a.751.751 0 0 0-.018-1.042.751.751 0 0 0-1.042-.018L6.75 9.19 5.28 7.72a.751.751 0 0 0-1.042.018.751.751 0 0 0-.018 1.042l2 2a.75.75 0 0 0 1.06 0Z"/></svg>
+          Solo dev sweet spot
+        </div>
+        <div class="card__body">
+          <p>For frontier models in the terminal, <strong>Claude Pro at $20</strong> still wins. Opus is no longer on Copilot Pro.</p>
+        </div>
+      </div>
+      <div class="card card--attention">
+        <div class="card__title">
+          <svg height="16" viewBox="0 0 16 16" width="16" aria-hidden="true" fill="currentColor"><path d="M4.47.22A.749.749 0 0 1 5 0h6c.199 0 .389.079.53.22l4.25 4.25c.141.14.22.331.22.53v6a.749.749 0 0 1-.22.53l-4.25 4.25A.749.749 0 0 1 11 16H5a.749.749 0 0 1-.53-.22L.22 11.53A.749.749 0 0 1 0 11V5c0-.199.079-.389.22-.53Zm3.53 3.78v4a.75.75 0 0 0 1.5 0v-4a.75.75 0 0 0-1.5 0Zm.75 6a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z"/></svg>
+          Sign-up friction
+        </div>
+        <div class="card__body">
+          <p>New self-serve Copilot Pro / Pro+ / Student paused on <strong>Apr 20</strong>; Business paused for Free/Team orgs on <strong>Apr 22</strong>.</p>
+        </div>
+      </div>
+      <div class="card card--danger">
+        <div class="card__title">
+          <svg height="16" viewBox="0 0 16 16" width="16" aria-hidden="true" fill="currentColor"><path d="M2.343 13.657A8 8 0 1 1 13.658 2.343 8 8 0 0 1 2.343 13.657ZM6.03 4.97a.751.751 0 0 0-1.042.018.751.751 0 0 0-.018 1.042L6.94 8 4.97 9.97a.749.749 0 0 0 .326 1.275.749.749 0 0 0 .734-.215L8 9.06l1.97 1.97a.749.749 0 0 0 1.275-.326.749.749 0 0 0-.215-.734L9.06 8l1.97-1.97a.749.749 0 0 0-.326-1.275.749.749 0 0 0-.734.215L8 6.94Z"/></svg>
+          Opus 4.7 cost shock
+        </div>
+        <div class="card__body">
+          <p>Opus 4.7 doubled from <span class="mono">7.5×</span> → <span class="mono">15×</span> on May 1. A single Opus turn now costs <strong class="text-danger">$0.60</strong> on Copilot.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SECTION 2 — Model multiplier (CHART)
+       ============================================================ -->
+  <section aria-labelledby="s2">
+    <h2 id="s2"><span class="section-num">02</span>Model access &amp; effective per-turn cost</h2>
+    <p class="lead">
+      Copilot meters every turn by a model multiplier. Claude bundles by family under session caps.
+      The chart shows today's effective $ cost per Copilot turn vs the API-rate equivalent.
+    </p>
+
+    <div class="grid grid--2">
+      <div class="chart-box">
+        <h3>Copilot multiplier per turn (today)</h3>
+        <p class="chart-caption">Base premium request = $0.04. Multipliers as of May 2026.</p>
+        <div class="chart-wrap"><canvas id="chartMultiplier"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <h3>Effective $ per turn vs API-rate tokens bought</h3>
+        <p class="chart-caption">How much raw API token capacity that $ would buy at 5:1 blended rates.</p>
+        <div class="chart-wrap"><canvas id="chartPerTurn"></canvas></div>
+      </div>
+    </div>
+
+    <h3>Plan × model matrix (Copilot, today)</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Plan</th>
+            <th>GPT-5.5</th>
+            <th>Opus 4.7</th>
+            <th>Opus 4.6</th>
+            <th>Sonnet 4.6</th>
+            <th>Haiku 4.5</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="strong">Pro</td>
+            <td><span class="badge badge--attention">7.5×</span></td>
+            <td><span class="badge badge--danger">No</span></td>
+            <td><span class="badge badge--danger">No</span></td>
+            <td><span class="badge badge--success">1×</span></td>
+            <td><span class="badge badge--success">0.33×</span></td>
+          </tr>
+          <tr>
+            <td class="strong">Pro+</td>
+            <td><span class="badge badge--attention">7.5×</span></td>
+            <td><span class="badge badge--severe">15×</span></td>
+            <td><span class="badge badge--attention">3×</span></td>
+            <td><span class="badge badge--success">1×</span></td>
+            <td><span class="badge badge--success">0.33×</span></td>
+          </tr>
+          <tr>
+            <td class="strong">Business</td>
+            <td><span class="badge badge--attention">7.5×</span></td>
+            <td><span class="badge badge--severe">15×</span></td>
+            <td><span class="badge badge--attention">3×</span></td>
+            <td><span class="badge badge--success">1×</span></td>
+            <td><span class="badge badge--success">0.33×</span></td>
+          </tr>
+          <tr>
+            <td class="strong">Enterprise</td>
+            <td><span class="badge badge--attention">7.5×</span></td>
+            <td><span class="badge badge--severe">15×</span></td>
+            <td><span class="badge badge--attention">3×</span></td>
+            <td><span class="badge badge--success">1×</span></td>
+            <td><span class="badge badge--success">0.33×</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SECTION 3 — API per-token pricing
+       ============================================================ -->
+  <section aria-labelledby="s3">
+    <h2 id="s3"><span class="section-num">03</span>Model-vendor API rates (Anthropic &amp; OpenAI)</h2>
+    <p class="lead">
+      These are the published per-token rates from the model providers themselves — <strong>not</strong> Copilot or Claude Code prices.
+      Claude Code passes these through 1:1 (no markup). Copilot resells the same models with a per-request multiplier on top.
+      This is the economic floor that every subscription collapses to once bundles are exhausted.
+    </p>
+
+    <div class="grid grid--2">
+      <div class="chart-box">
+        <h3>Blended $/M tokens (5:1 in/out, no cache)</h3>
+        <p class="chart-caption">Anthropic and OpenAI list prices. Lower is better. GPT-5.5 also has a long-context tier above 270K input tokens.</p>
+        <div class="chart-wrap"><canvas id="chartBlended"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <h3>Input / output rate cards ($/M tokens)</h3>
+        <p class="chart-caption">Published rate cards for the four headline models. Same numbers Claude Code charges via API key; Copilot reprices these via $0.04 × multiplier.</p>
+        <div class="chart-wrap"><canvas id="chartIO"></canvas></div>
+      </div>
+    </div>
+
+    <div class="grid grid--3" style="margin-top: 16px;">
+      <div class="card card--danger">
+        <div class="stat__label">GPT-5.5 long-context surcharge</div>
+        <div class="stat__value text-danger">+2×</div>
+        <div class="stat__sub">Input jumps $5 → $10/M above 270K input tokens. Output rises 1.5×.</div>
+      </div>
+      <div class="card card--success">
+        <div class="stat__label">Claude long-context surcharge</div>
+        <div class="stat__value text-success">0%</div>
+        <div class="stat__sub">Opus 4.7, Opus 4.6, and Sonnet 4.6 keep standard rates all the way to 1M tokens.</div>
+      </div>
+      <div class="card card--attention">
+        <div class="stat__label">Opus 4.7 tokenizer inflation</div>
+        <div class="stat__value text-attention">+35%</div>
+        <div class="stat__sub">Can use up to 35% more tokens than Opus 4.6 for the same input. Rate parity ≠ task-level parity.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SECTION 4 — June timeline
+       ============================================================ -->
+  <section aria-labelledby="s4">
+    <h2 id="s4"><span class="section-num">04</span>The June 2026 billing rewrite</h2>
+    <p class="lead">
+      Two structural changes 14 days apart. After this window, the bundle-arbitrage era ends on both sides.
+    </p>
+
+    <div class="grid grid--2">
+      <div>
+        <h3>
+          <span class="vendor-dot vendor-dot--copilot" style="margin-right:6px;">GH</span>
+          Copilot — June 1: AI Credits
+        </h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Plan</th><th>Price</th><th>Base credits</th><th>Flex</th><th>Total value</th></tr>
+            </thead>
+            <tbody>
+              <tr><td class="strong">Pro</td><td class="mono">$10</td><td class="mono">1,000</td><td class="mono">500</td><td class="mono">$15</td></tr>
+              <tr><td class="strong">Pro+</td><td class="mono">$39</td><td class="mono">3,900</td><td class="mono">3,100</td><td class="mono">$70</td></tr>
+              <tr><td class="strong">Max</td><td class="mono">$100</td><td class="mono">10,000</td><td class="mono">10,000</td><td class="mono">$200</td></tr>
+              <tr><td class="strong">Business</td><td class="mono">$19/seat</td><td class="mono">1,900</td><td class="mono">(promo 3,000)</td><td class="mono">$19–$30</td></tr>
+              <tr><td class="strong">Enterprise</td><td class="mono">$39/seat</td><td class="mono">3,900</td><td class="mono">(promo 7,000)</td><td class="mono">$39–$70</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="text-muted" style="margin-top:8px;font-size:12px;">1 AI Credit = $0.01. No automatic fallback once exhausted.</p>
+      </div>
+
+      <div>
+        <h3>
+          <span class="vendor-dot vendor-dot--claude" style="margin-right:6px;">AN</span>
+          Claude — June 15: Programmatic credits
+        </h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Plan</th><th>Monthly programmatic pool</th></tr>
+            </thead>
+            <tbody>
+              <tr><td class="strong">Pro</td><td class="mono">$20</td></tr>
+              <tr><td class="strong">Max 5×</td><td class="mono">$100</td></tr>
+              <tr><td class="strong">Max 20×</td><td class="mono">$200</td></tr>
+              <tr><td class="strong">Team Standard</td><td class="mono">$20 / seat</td></tr>
+              <tr><td class="strong">Team Premium</td><td class="mono">$100 / seat</td></tr>
+              <tr><td class="strong">Enterprise (usage)</td><td class="mono">$20</td></tr>
+              <tr><td class="strong">Enterprise (Premium seat)</td><td class="mono">$200 / seat</td></tr>
+              <tr><td class="strong">Enterprise (Standard seat)</td><td><span class="badge badge--danger">Ineligible</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="text-muted" style="margin-top:8px;font-size:12px;">
+          1 credit = $1 of standard API usage. Per-user, <strong>no pooling, no rollover</strong>.
+          Affects <code>claude -p</code>, Agent SDK, <code>claude-code-action</code>, third-party SDK apps.
+        </p>
+      </div>
+    </div>
+
+    <h3>Critical dates</h3>
+    <ol class="timeline">
+      <li class="timeline__item">
+        <span class="timeline__dot timeline__dot--attention"></span>
+        <div class="timeline__date">Apr 20, 2026</div>
+        <div class="timeline__title">Copilot pauses new Pro / Pro+ / Student sign-ups</div>
+        <div class="timeline__body">Opus removed from Pro plan. Individual-plan economics tightened.</div>
+      </li>
+      <li class="timeline__item">
+        <span class="timeline__dot timeline__dot--attention"></span>
+        <div class="timeline__date">Apr 22, 2026</div>
+        <div class="timeline__title">Copilot pauses new self-serve Business sign-ups</div>
+        <div class="timeline__body">VS Code BYOK becomes GA for Business and Enterprise.</div>
+      </li>
+      <li class="timeline__item">
+        <span class="timeline__dot"></span>
+        <div class="timeline__date">Apr 27, 2026</div>
+        <div class="timeline__title">GitHub announces move to usage-based billing</div>
+      </li>
+      <li class="timeline__item">
+        <span class="timeline__dot timeline__dot--danger"></span>
+        <div class="timeline__date">May 1, 2026</div>
+        <div class="timeline__title">Opus 4.7 multiplier doubles from 7.5× to 15×</div>
+        <div class="timeline__body">Single biggest current-model pricing change inside Copilot.</div>
+      </li>
+      <li class="timeline__item">
+        <span class="timeline__dot"></span>
+        <div class="timeline__date">May 12, 2026</div>
+        <div class="timeline__title">Copilot Max plan announced with flex allotments</div>
+      </li>
+      <li class="timeline__item">
+        <span class="timeline__dot timeline__dot--danger"></span>
+        <div class="timeline__date">May 13, 2026</div>
+        <div class="timeline__title">Anthropic announces programmatic credit pool</div>
+        <div class="timeline__body">HN reaction calls it a de facto 10×–100× price hike for heavy <code>claude -p</code> users.</div>
+      </li>
+      <li class="timeline__item">
+        <span class="timeline__dot"></span>
+        <div class="timeline__date">May 17, 2026</div>
+        <div class="timeline__title">GPT-5.3-Codex becomes default for Business/Enterprise</div>
+      </li>
+      <li class="timeline__item">
+        <span class="timeline__dot timeline__dot--done"></span>
+        <div class="timeline__date">Jun 1, 2026</div>
+        <div class="timeline__title">Copilot AI Credits go live</div>
+        <div class="timeline__body">Monthly subscribers auto-migrate. Annual subscribers stay on premium requests until expiry, but multipliers rise.</div>
+      </li>
+      <li class="timeline__item">
+        <span class="timeline__dot timeline__dot--done"></span>
+        <div class="timeline__date">Jun 15, 2026</div>
+        <div class="timeline__title">Claude programmatic billing splits live</div>
+        <div class="timeline__body">Interactive Claude Code keeps current caps. Headless paths move to per-user dollar pools.</div>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ============================================================
+       SECTION 5 — Worked examples (CHART)
+       ============================================================ -->
+  <section aria-labelledby="s5">
+    <h2 id="s5"><span class="section-num">05</span>Worked monthly cost examples</h2>
+    <p class="lead">Three real-world workloads. The Opus-heavy scenarios are where Copilot's request pricing breaks down.</p>
+
+    <h3>A. Casual user — ~900 turns/month, mostly Sonnet</h3>
+    <div class="chart-box" style="margin-bottom:24px;">
+      <div class="chart-wrap"><canvas id="chartScenarioA"></canvas></div>
+      <p class="text-muted" style="font-size:12px;margin-top:8px;">
+        Realistic mix: <strong>90% Sonnet 4.6 (810 turns) + 10% Opus 4.7 (90 turns)</strong> = 2,160 premium requests.
+        Copilot Pro is excluded — after Apr 20 it cannot serve this workload (no Opus on Pro).
+        Claude figures are subscription floors — actual cost depends on whether weekly caps bite.
+      </p>
+    </div>
+
+    <h3>B. Heavy agentic coder — 6,000 Opus prompts/month, mostly <code>claude -p</code></h3>
+    <div class="chart-box" style="margin-bottom:24px;">
+      <div class="chart-wrap chart-wrap--tall"><canvas id="chartScenarioB"></canvas></div>
+      <p class="text-muted" style="font-size:12px;margin-top:8px;">
+        Assumes ~432M blended Opus 4.7 tokens (Copilot equivalent of 90,000 premium requests).
+        The Max <strong>floor</strong> ($100 / $200) only applies if the user enables hard-stop;
+        with usage credits on, overflow drains to PAYG at <span class="mono">$8.33/M</span> blended.
+        Post-Jun 15, all token-priced options converge near <span class="mono">~$3,600/mo</span> —
+        the bundle arbitrage is gone.
+      </p>
+    </div>
+
+    <h3>C. Enterprise team of 20 developers — seat fee vs total bill</h3>
+    <div class="chart-box">
+      <div class="chart-wrap chart-wrap--tall"><canvas id="chartScenarioC"></canvas></div>
+      <p class="text-muted" style="font-size:12px;margin-top:8px;">
+        Assumes 20 seats, moderate IDE use that fits within plan caps, plus
+        <strong>~30M Sonnet 4.6 cached tokens/mo of shared CI</strong> (≈ 30 small CI runs).
+        <strong>Both vendors meter CI at API-equivalent rates</strong> (~$96 for this workload):
+        Copilot cloud agent and code review burn AI Credits at each model's multiplier,
+        and Claude burns programmatic credits at $1 = $1 of API usage.
+        The real asymmetry is <strong>pooling</strong>: Copilot Business's $380 of <em>org-pooled</em>
+        included credits absorbs the $96 of CI → effective incremental spillover ≈ $0.
+        Claude Team Std's $400 of <em>per-user</em> $20 pools <strong>cannot be aggregated</strong>
+        for shared automation, so that same $96 must go to <code>ANTHROPIC_API_KEY</code> direct
+        billing on top. Copilot still pays GitHub Actions minutes (~$25/mo modeled here)
+        on top of AI Credits.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SECTION 6 — Gotchas
+       ============================================================ -->
+  <section aria-labelledby="s6">
+    <h2 id="s6"><span class="section-num">06</span>Hidden costs &amp; gotchas</h2>
+    <p class="lead">Things you only find when the invoice arrives — grouped by which vendor they bite.</p>
+
+    <h3 class="subhead">GitHub Copilot only</h3>
+    <div class="grid grid--2">
+      <div class="card card--danger">
+        <div class="card__title">
+          <span class="text-danger">Dual-metered cloud agent &amp; review</span>
+          <span class="vendor-tag vendor-tag--copilot">Copilot</span>
+        </div>
+        <div class="card__body">Coding agent and code review consume <strong>Copilot AI credits AND GitHub Actions minutes</strong>. Modeling AI cost alone understates the bill.</div>
+      </div>
+      <div class="card card--attention">
+        <div class="card__title">
+          <span class="text-attention">BYOK ≠ free completions</span>
+          <span class="vendor-tag vendor-tag--copilot">Copilot</span>
+        </div>
+        <div class="card__body">BYOK bypasses Copilot metering for chat/CLI you route yourself, but <strong>code completions still run through Copilot</strong>. VS Code BYOK is Business/Enterprise only.</div>
+      </div>
+      <div class="card card--attention">
+        <div class="card__title">
+          <span class="text-attention">GPT-5.5 long-context cliff</span>
+          <span class="vendor-tag vendor-tag--copilot">Copilot</span>
+        </div>
+        <div class="card__body">Above 270K input tokens, input <strong>doubles to $10/M</strong> and output rises to $45/M. GPT-5.5 is Copilot-only, so this bites IDE/agent workloads, not Claude Code.</div>
+      </div>
+      <div class="card card--attention">
+        <div class="card__title">
+          <span class="text-attention">Pro no longer covers Opus</span>
+          <span class="vendor-tag vendor-tag--copilot">Copilot</span>
+        </div>
+        <div class="card__body">After Apr 20, 2026, Copilot Pro lost Opus 4.7 access. Any workload that needs Opus must move to Pro+, Business, or Enterprise.</div>
+      </div>
+    </div>
+
+    <h3 class="subhead">Claude Code only</h3>
+    <div class="grid grid--2">
+      <div class="card card--danger">
+        <div class="card__title">
+          <span class="text-danger">Credits don't pool or roll over</span>
+          <span class="vendor-tag vendor-tag--claude">Claude Code</span>
+        </div>
+        <div class="card__body">Team Premium = 20 separate $100 stipends, <strong>not one $2,000 pool</strong>. Shared CI can hard-stop on a single user even when the org has headroom elsewhere.</div>
+      </div>
+      <div class="card card--danger">
+        <div class="card__title">
+          <span class="text-danger"><code>claude-code-action</code> can hard-stop</span>
+          <span class="vendor-tag vendor-tag--claude">Claude Code</span>
+        </div>
+        <div class="card__body">Subscription OAuth burns the user's programmatic pool. Once exhausted, Actions traffic fails until reset unless usage credits are enabled.</div>
+      </div>
+      <div class="card card--attention">
+        <div class="card__title">
+          <span class="text-attention">June 15 headless cut</span>
+          <span class="vendor-tag vendor-tag--claude">Claude Code</span>
+        </div>
+        <div class="card__body">Pro/Max subsidy on non-interactive (<code>claude -p</code>, SDK, Actions) ends. Heavy headless usage post-Jun 15 pays API rates regardless of plan.</div>
+      </div>
+      <div class="card card--attention">
+        <div class="card__title">
+          <span class="text-attention">US-only inference uplift</span>
+          <span class="vendor-tag vendor-tag--claude">Anthropic API</span>
+        </div>
+        <div class="card__body">~10% surcharge on Anthropic <code>inference_geo: "us"</code>. Hits direct-API and Claude Code paths; Copilot users see this only via BYOK.</div>
+      </div>
+    </div>
+
+    <h3 class="subhead">Affects both vendors</h3>
+    <div class="grid grid--2">
+      <div class="card card--danger">
+        <div class="card__title">
+          <span class="text-danger">Fast / Pro SKU jumps</span>
+          <span class="vendor-tag vendor-tag--both">Both</span>
+        </div>
+        <div class="card__body">Opus 4.7 Fast = <span class="mono">$30/$150</span> (Claude side). GPT-5.5 Pro = <span class="mono">$30/$180</span> (Copilot side). Both are <strong>6× standard</strong> — easy to trip into.</div>
+      </div>
+      <div class="card card--attention">
+        <div class="card__title">
+          <span class="text-attention">Opus 4.7 tokenizer inflation</span>
+          <span class="vendor-tag vendor-tag--both">Both</span>
+        </div>
+        <div class="card__body">Same text can cost <strong>up to 35% more tokens</strong> than Opus 4.6 at identical rates. Hits Claude Code <em>and</em> Copilot Pro+/Business/Enterprise whenever Opus 4.7 is selected.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SECTION 7 — Decision matrix
+       ============================================================ -->
+  <section aria-labelledby="s7">
+    <h2 id="s7"><span class="section-num">07</span>Decision matrix</h2>
+    <p class="lead">What to pick, by situation.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Situation</th><th>Winner</th><th>Why</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Cheapest path to frontier models in terminal</td>
+            <td><span class="badge badge--accent">Claude Pro</span></td>
+            <td>$20 includes Opus, Sonnet, Haiku. Copilot Pro no longer includes Opus.</td>
+          </tr>
+          <tr>
+            <td>Cheapest GitHub-native IDE setup, light premium use</td>
+            <td><span class="badge badge--accent">Copilot Pro</span></td>
+            <td>$10 entry. Unlimited completions. Stay off frontier models.</td>
+          </tr>
+          <tr>
+            <td>Solo dev, heavy Opus user, interactive</td>
+            <td><span class="badge badge--done">Claude Max</span></td>
+            <td>Bundles Opus more cleanly than Copilot's 15× Opus 4.7 math. Interactive sessions unaffected by June 15.</td>
+          </tr>
+          <tr>
+            <td>Heavy headless or CI automation</td>
+            <td><span class="badge badge--attention">Anthropic API direct / Copilot BYOK</span></td>
+            <td>After Jun 15, no hidden subscription subsidy for large headless workloads.</td>
+          </tr>
+          <tr>
+            <td>GitHub Actions automation</td>
+            <td><span class="badge badge--attention"><code>ANTHROPIC_API_KEY</code> direct</span></td>
+            <td>Subscription OAuth burns one user's pool. Direct API for capless shared CI.</td>
+          </tr>
+          <tr>
+            <td>IDE-bound team centered on GitHub</td>
+            <td><span class="badge badge--accent">Copilot Business / Enterprise</span></td>
+            <td>Policy, audit, content exclusion, VS Code BYOK. Pricing rewrite midstream.</td>
+          </tr>
+          <tr>
+            <td>Terminal-bound Claude Code team</td>
+            <td><span class="badge badge--done">Claude Team / Enterprise</span></td>
+            <td>Native workflow, no Copilot multipliers. Shared automation is now a separate buying decision.</td>
+          </tr>
+          <tr>
+            <td>Big-context workload (500K+ tokens)</td>
+            <td><span class="badge badge--done">Claude</span></td>
+            <td>1M context at standard pricing. GPT-5.5 hits the 270K cliff.</td>
+          </tr>
+          <tr>
+            <td>Latency-sensitive workflow</td>
+            <td><span class="badge badge--danger">Neither by default</span></td>
+            <td>Fast tiers cost 6×. Pay for speed deliberately, not by accident.</td>
+          </tr>
+          <tr>
+            <td>Wants fully transparent bundle economics</td>
+            <td><span class="badge badge--danger">Neither</span></td>
+            <td>Direct API + your own dashboards is the least-bad path.</td>
+          </tr>
+          <tr>
+            <td>Mixed IDE + terminal power users</td>
+            <td><span class="badge">Both</span></td>
+            <td>Run Copilot for completions/PR workflow, Claude Code for deep terminal + big-context. Police overlap.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SECTION 8 — Caveats
+       ============================================================ -->
+  <section aria-labelledby="s8">
+    <h2 id="s8"><span class="section-num">08</span>Caveats &amp; unknowns</h2>
+    <p class="lead">What the public docs <em>do not</em> tell you.</p>
+
+    <details open>
+      <summary>Exact public weekly caps for Claude tiers</summary>
+      <p>Anthropic publishes structure, not hard public numbers, for most tiers. The Jul 28, 2025 Max 5× guidance (140–280h Sonnet, 15–35h Opus) was published <em>once</em> in a subscriber email — not a permanent contract.</p>
+    </details>
+    <details>
+      <summary>Post-June Copilot AI Credit rate card per model</summary>
+      <p>Directionally known but not perfectly settled. GitHub says AI Credits map to published API rates; April usage reports are only directional.</p>
+    </details>
+    <details>
+      <summary>Annual Copilot subscribers' post-June multiplier table</summary>
+      <p>Not fully itemized. Annual users stay on old model until expiry; GitHub says multipliers will rise on June 1.</p>
+    </details>
+    <details>
+      <summary>Marginal per-prompt value inside Claude bundles</summary>
+      <p>Not public. There is no honest <code>1 Max prompt = $X</code> figure to compare against Copilot's <code>$0.04 × multiplier</code> math.</p>
+    </details>
+    <details>
+      <summary>Stdin-piped <code>claude</code> and hook-triggered subagents post-Jun 15</summary>
+      <p>Not fully explicit. Anthropic names <code>claude -p</code> but has not exhaustively enumerated every headless path. Re-check after Jun 15.</p>
+    </details>
+    <details>
+      <summary>"Claude raised prices in 2026" claim</summary>
+      <p>Sticker prices are unchanged. But heavy headless automation does get materially more expensive from Jun 15 via the separate API-rate credit pool. Both things are true.</p>
+    </details>
+  </section>
+
+  <!-- ============================================================
+       SECTION 9 — Bottom line
+       ============================================================ -->
+  <section aria-labelledby="s9">
+    <h2 id="s9"><span class="section-num">09</span>Revised bottom line</h2>
+
+    <div class="grid grid--2">
+      <div class="card card--done">
+        <div class="card__title">
+          <span class="vendor-dot vendor-dot--claude" style="margin-right:4px;">AN</span>
+          Claude Code
+        </div>
+        <div class="card__body">
+          <p>Remains compelling for <strong>interactive Claude-heavy use</strong>.</p>
+          <p>After Jun 15, programmatic Claude Code is <strong>no longer a cheap headless-agent loophole</strong>. It becomes standard API-priced usage with a small per-user included pool.</p>
+        </div>
+      </div>
+      <div class="card card--accent">
+        <div class="card__title">
+          <span class="vendor-dot vendor-dot--copilot" style="margin-right:4px;">GH</span>
+          GitHub Copilot
+        </div>
+        <div class="card__body">
+          <p>Remains compelling for <strong>GitHub-native IDE and team workflows</strong>, especially where pooled org controls matter.</p>
+          <p>Exact post-Jun-1 pricing still needs <strong>live monitoring</strong> — AI Credits and Actions minutes can interact in surprising ways.</p>
+        </div>
+      </div>
+    </div>
+
+    <h3>Budgeting rule: split every workflow into three buckets</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Bucket</th><th>Examples</th><th>Pricing risk</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="state state--open"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="3"/></svg> Interactive</span></td>
+            <td>IDE chat, terminal <code>claude</code>, Claude.ai, Copilot chat</td>
+            <td>Governed by plan caps and product quotas, often opaque</td>
+          </tr>
+          <tr>
+            <td><span class="state state--merged"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="3"/></svg> Headless / programmatic</span></td>
+            <td><code>claude -p</code>, Agent SDK, Code Action, 3rd-party SDK apps</td>
+            <td>Claude moves to standard API rates from Jun 15 with small per-user pools</td>
+          </tr>
+          <tr>
+            <td><span class="state state--draft"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="3"/></svg> CI / runtime</span></td>
+            <td>GitHub Actions, Copilot cloud agent, code review automation</td>
+            <td>Adds runtime charges on top of AI usage</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p>
+      Compiled from <code>comparison-report.md</code> · May 2026 ·
+      Styled with the <a href="https://primer.style" target="_blank" rel="noopener">GitHub Primer Design System</a>
+    </p>
+    <p>
+      Primary sources include
+      <a href="https://github.blog/news-insights/company-news/github-copilot-is-moving-to-usage-based-billing/" target="_blank" rel="noopener">GitHub's UBB announcement</a>,
+      <a href="https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan" target="_blank" rel="noopener">Anthropic's Agent SDK billing notice</a>,
+      and the official OpenAI / Anthropic pricing pages.
+    </p>
+  </footer>
+</main>
+
+<script>
+/* ============================================================
+   Theme toggle
+   ============================================================ */
+const html = document.documentElement;
+const themeBtn = document.getElementById('themeToggle');
+const themeLabel = document.getElementById('themeLabel');
+
+function applyTheme(mode) {
+  html.setAttribute('data-color-mode', mode);
+  themeLabel.textContent = mode === 'dark' ? 'Light' : 'Dark';
+  try { localStorage.setItem('color-mode', mode); } catch (_) {}
+  renderCharts(); // re-render with new colors
+}
+
+const saved = (() => { try { return localStorage.getItem('color-mode'); } catch (_) { return null; } })();
+if (saved === 'dark' || saved === 'light') {
+  applyTheme(saved);
+} else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+  applyTheme('dark');
+}
+
+themeBtn.addEventListener('click', () => {
+  const next = html.getAttribute('data-color-mode') === 'dark' ? 'light' : 'dark';
+  applyTheme(next);
+});
+
+/* ============================================================
+   Charts (Chart.js)
+   ============================================================ */
+let charts = [];
+
+function readVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+function destroyCharts() {
+  charts.forEach(c => c.destroy());
+  charts = [];
+}
+
+function renderCharts() {
+  destroyCharts();
+
+  const colors = {
+    fg: readVar('--fgColor-default'),
+    muted: readVar('--fgColor-muted'),
+    grid: readVar('--borderColor-muted'),
+    accent: readVar('--fgColor-accent'),
+    success: readVar('--fgColor-success'),
+    danger: readVar('--fgColor-danger'),
+    attention: readVar('--fgColor-attention'),
+    done: readVar('--fgColor-done'),
+    severe: readVar('--fgColor-severe'),
+    copilot: readVar('--color-copilot'),
+    claude: readVar('--color-claude'),
+    bg: readVar('--bgColor-default'),
+  };
+
+  const baseOpts = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { labels: { color: colors.fg, font: { family: 'inherit', size: 12 } } },
+      tooltip: {
+        backgroundColor: readVar('--bgColor-emphasis'),
+        titleColor: '#fff',
+        bodyColor: '#fff',
+        borderColor: colors.grid,
+        borderWidth: 1,
+        padding: 10,
+        cornerRadius: 6,
+      }
+    },
+    scales: {
+      x: { ticks: { color: colors.muted }, grid: { color: colors.grid, drawBorder: false } },
+      y: { ticks: { color: colors.muted }, grid: { color: colors.grid, drawBorder: false } }
+    }
+  };
+
+  // ---------- Chart 1: multipliers ----------
+  charts.push(new Chart(document.getElementById('chartMultiplier'), {
+    type: 'bar',
+    data: {
+      labels: ['Haiku 4.5', 'Sonnet 4.6', 'Opus 4.6', 'GPT-5.5', 'Opus 4.7'],
+      datasets: [{
+        label: 'Multiplier',
+        data: [0.33, 1, 3, 7.5, 15],
+        backgroundColor: [colors.success, colors.success, colors.attention, colors.attention, colors.danger],
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      ...baseOpts,
+      plugins: { ...baseOpts.plugins, legend: { display: false },
+        tooltip: { ...baseOpts.plugins.tooltip, callbacks: {
+          label: ctx => `${ctx.parsed.y}× = $${(ctx.parsed.y * 0.04).toFixed(2)} per turn`
+        }}
+      },
+      scales: { ...baseOpts.scales,
+        y: { ...baseOpts.scales.y, title: { display: true, text: 'Multiplier (× base)', color: colors.muted } }
+      }
+    }
+  }));
+
+  // ---------- Chart 2: per-turn cost ----------
+  charts.push(new Chart(document.getElementById('chartPerTurn'), {
+    type: 'bar',
+    data: {
+      labels: ['Sonnet 4.6', 'Opus 4.6', 'GPT-5.5 (short)', 'GPT-5.5 (long)', 'Opus 4.7'],
+      datasets: [
+        {
+          label: 'Copilot $/turn',
+          data: [0.04, 0.12, 0.30, 0.30, 0.60],
+          backgroundColor: colors.copilot === '#e6edf3' ? colors.muted : colors.copilot,
+          borderRadius: 4,
+        },
+        {
+          label: 'API equivalent tokens (K)',
+          data: [8.0, 14.4, 32.7, 19.0, 72.0],
+          backgroundColor: colors.claude,
+          borderRadius: 4,
+          yAxisID: 'y1',
+        }
+      ]
+    },
+    options: {
+      ...baseOpts,
+      scales: {
+        x: baseOpts.scales.x,
+        y: { ...baseOpts.scales.y, position: 'left',
+             title: { display: true, text: '$ per turn (Copilot)', color: colors.muted } },
+        y1: { ticks: { color: colors.muted }, grid: { drawOnChartArea: false },
+              position: 'right',
+              title: { display: true, text: 'K tokens bought at API rate', color: colors.muted } }
+      }
+    }
+  }));
+
+  // ---------- Chart 3: blended $/M ----------
+  charts.push(new Chart(document.getElementById('chartBlended'), {
+    type: 'bar',
+    data: {
+      labels: ['Sonnet 4.6', 'Opus 4.7', 'Opus 4.6', 'GPT-5.5 (short)', 'GPT-5.5 (long >270K)'],
+      datasets: [{
+        label: 'Blended $/M tokens (no cache)',
+        data: [5.00, 8.33, 8.33, 9.17, 15.83],
+        backgroundColor: [colors.success, colors.done, colors.done, colors.attention, colors.danger],
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      ...baseOpts,
+      plugins: { ...baseOpts.plugins, legend: { display: false },
+        tooltip: { ...baseOpts.plugins.tooltip, callbacks: {
+          label: ctx => `$${ctx.parsed.y.toFixed(2)} per million tokens`
+        }}
+      },
+      scales: { ...baseOpts.scales,
+        y: { ...baseOpts.scales.y, title: { display: true, text: '$/M blended', color: colors.muted } }
+      }
+    }
+  }));
+
+  // ---------- Chart 4: input/output rates ----------
+  charts.push(new Chart(document.getElementById('chartIO'), {
+    type: 'bar',
+    data: {
+      labels: ['GPT-5.5', 'Opus 4.7', 'Opus 4.6', 'Sonnet 4.6'],
+      datasets: [
+        { label: 'Input $/M',  data: [5, 5, 5, 3],   backgroundColor: colors.accent, borderRadius: 4 },
+        { label: 'Cached $/M', data: [0.5, 0.5, 0.5, 0.3], backgroundColor: colors.success, borderRadius: 4 },
+        { label: 'Output $/M', data: [30, 25, 25, 15], backgroundColor: colors.danger, borderRadius: 4 },
+      ]
+    },
+    options: {
+      ...baseOpts,
+      scales: { ...baseOpts.scales,
+        y: { ...baseOpts.scales.y, title: { display: true, text: '$/M tokens', color: colors.muted } }
+      }
+    }
+  }));
+
+  // ---------- Chart 5: scenario A ----------
+  // Mix: 810 Sonnet (1×) + 90 Opus 4.7 (15×) = 810 + 1,350 = 2,160 premium requests
+  // Pro+:       $39 + (2,160 - 1,500) × $0.04 = $65.40
+  // Business:   $19 + (2,160 -   300) × $0.04 = $93.40
+  // Enterprise: $39 + (2,160 - 1,000) × $0.04 = $85.40
+  charts.push(new Chart(document.getElementById('chartScenarioA'), {
+    type: 'bar',
+    data: {
+      labels: [
+        'Claude Pro (floor)',
+        'Copilot Pro+ (mix)',
+        'Copilot Enterprise (mix, 1 seat)',
+        'Claude Max 5× (floor)'
+      ],
+      datasets: [{
+        label: 'Monthly cost ($)',
+        data: [20, 65.40, 85.40, 100],
+        backgroundColor: [
+          colors.claude,
+          colors.copilot === '#e6edf3' ? colors.muted : colors.copilot,
+          colors.copilot === '#e6edf3' ? colors.muted : colors.copilot,
+          colors.claude
+        ],
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      ...baseOpts,
+      indexAxis: 'y',
+      plugins: { ...baseOpts.plugins, legend: { display: false },
+        tooltip: { ...baseOpts.plugins.tooltip, callbacks: {
+          label: ctx => `$${ctx.parsed.x.toFixed(2)} / mo`
+        }}
+      },
+      scales: {
+        x: { ...baseOpts.scales.x, title: { display: true, text: '$ / month', color: colors.muted } },
+        y: baseOpts.scales.y
+      }
+    }
+  }));
+
+  // ---------- Chart 6: scenario B ----------
+  charts.push(new Chart(document.getElementById('chartScenarioB'), {
+    type: 'bar',
+    data: {
+      labels: [
+        'Claude Max 5× (pre Jun 15, bundled)',
+        'Claude Max 5× (post Jun 15, hard-stop floor)',
+        'Claude Max 20× (post Jun 15, hard-stop floor)',
+        'Claude Max 5× (post Jun 15 + PAYG)',
+        'Claude Max 20× (post Jun 15 + PAYG)',
+        'Anthropic API direct',
+        'Copilot Pro+ today',
+        'Copilot Enterprise today',
+        'Copilot Business today'
+      ],
+      datasets: [{
+        label: 'Monthly cost ($)',
+        data: [100, 100, 200, 3599, 3599, 3599, 3579, 3599, 3607],
+        backgroundColor: [
+          colors.claude, colors.claude, colors.claude,
+          colors.danger, colors.danger, colors.danger,
+          colors.copilot === '#e6edf3' ? colors.muted : colors.copilot,
+          colors.copilot === '#e6edf3' ? colors.muted : colors.copilot,
+          colors.copilot === '#e6edf3' ? colors.muted : colors.copilot
+        ],
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      ...baseOpts,
+      indexAxis: 'y',
+      plugins: { ...baseOpts.plugins, legend: { display: false },
+        tooltip: { ...baseOpts.plugins.tooltip, callbacks: {
+          label: ctx => `$${ctx.parsed.x.toLocaleString()} / mo`
+        }}
+      },
+      scales: {
+        x: { ...baseOpts.scales.x, type: 'logarithmic',
+             title: { display: true, text: '$ / month (log scale — floor vs full workload)', color: colors.muted } },
+        y: baseOpts.scales.y
+      }
+    }
+  }));
+
+  // ---------- Chart 7: scenario C ----------
+  // 20 seats, moderate interactive use, +30M Sonnet 4.6 cached tokens/mo of shared CI.
+  // Sonnet 4.6 blended 80% cache = $3.20/M → 30M = $96 of CI cost (gross, same on both vendors).
+  //
+  // Copilot CI also burns AI Credits at the model's multiplier (same as any turn),
+  // BUT Business has 20×1,900 = 38,000 included credits ($380 pooled) and Enterprise
+  // has 20×3,900 = 78,000 ($780 pooled). $96 of CI fits well inside pooled credits →
+  // net incremental spillover ≈ $0. Plus GitHub Actions minutes (~$25/mo).
+  //
+  // Claude Team Std: $400 of programmatic credit is split into 20 per-user $20 pools,
+  // cannot be aggregated for shared CI → that workload must go to direct API at $96.
+  // Team Premium: 20×$100 per-user pools cover it only if centralized, but per-user
+  // discipline means shared CI usually goes to direct API too — modeled here as $0
+  // assuming Premium quota is sufficient.
+  charts.push(new Chart(document.getElementById('chartScenarioC'), {
+    type: 'bar',
+    data: {
+      labels: [
+        'Copilot Business (post Jun 1)',
+        'Claude Team Std annual + direct-API CI',
+        'Copilot Enterprise (post Jun 1)',
+        'Claude Team Premium annual'
+      ],
+      datasets: [
+        {
+          label: 'Seat fee (20 seats)',
+          data: [380, 400, 780, 2000],
+          backgroundColor: colors.accent,
+          borderRadius: 4,
+          stack: 'cost',
+        },
+        {
+          label: 'Shared CI / programmatic (net of included credits)',
+          data: [0, 96, 0, 0],
+          backgroundColor: colors.done,
+          borderRadius: 4,
+          stack: 'cost',
+        },
+        {
+          label: 'GitHub Actions minutes (Copilot CI only)',
+          data: [25, 0, 25, 0],
+          backgroundColor: colors.attention,
+          borderRadius: 4,
+          stack: 'cost',
+        }
+      ]
+    },
+    options: {
+      ...baseOpts,
+      indexAxis: 'y',
+      plugins: { ...baseOpts.plugins,
+        tooltip: { ...baseOpts.plugins.tooltip, callbacks: {
+          label: ctx => `${ctx.dataset.label}: $${ctx.parsed.x.toLocaleString()}`,
+          footer: items => {
+            const total = items.reduce((s, i) => s + i.parsed.x, 0);
+            return `Total: $${total.toLocaleString()} / mo`;
+          }
+        }}
+      },
+      scales: {
+        x: { ...baseOpts.scales.x, stacked: true,
+             title: { display: true, text: '$ / month (20 seats, stacked)', color: colors.muted } },
+        y: { ...baseOpts.scales.y, stacked: true }
+      }
+    }
+  }));
+}
+
+renderCharts();
+</script>
+</body>
+</html>
