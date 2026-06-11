@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Qwen 3.6 27B — Azure A100/H100 Sizing</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text2: #8b949e;
+      --accent: #58a6ff;
+      --green: #3fb950;
+      --yellow: #d29922;
+      --red: #f85149;
+      --purple: #bc8cff;
+      --orange: #f0883e;
+      --radius: 8px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: var(--bg); color: var(--text); line-height: 1.6;
+      padding: 24px; max-width: 1500px; margin: 0 auto;
+    }
+
+    h1 { font-size: 1.8rem; margin-bottom: 4px; }
+    h2 { font-size: 1.2rem; color: var(--accent); margin: 28px 0 12px; }
+    .subtitle { color: var(--text2); font-size: 0.95rem; margin-bottom: 24px; }
+
+    .badge {
+      display: inline-block; font-size: 0.78rem; font-weight: 600;
+      padding: 2px 10px; border-radius: 12px; margin-left: 10px; vertical-align: middle;
+    }
+    .badge-azure { background: rgba(0, 120, 212, 0.18); color: #4da3ff; }
+    .badge-qwen { background: rgba(188, 140, 255, 0.15); color: var(--purple); }
+
+    .input-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px 24px; margin-bottom: 8px;
+    }
+    .input-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px; margin-bottom: 16px;
+    }
+    .primary-input label { color: var(--accent); font-weight: 600; }
+    label { display: block; color: var(--text2); font-size: 0.85rem; margin-bottom: 4px; }
+    input[type=number], select {
+      width: 100%; padding: 8px 12px; border-radius: 6px;
+      border: 1px solid var(--border); background: var(--bg);
+      color: var(--text); font-size: 0.95rem;
+    }
+    .primary-input input[type=number] { border-color: var(--accent); font-weight: 600; }
+    input[type=number]:focus, select:focus { outline: none; border-color: var(--accent); }
+    .hint { font-size: 0.78rem; color: var(--text2); margin-top: 2px; }
+    button {
+      background: var(--accent); color: #fff; border: none;
+      padding: 10px 28px; border-radius: 6px; font-size: 0.95rem;
+      cursor: pointer; font-weight: 600;
+    }
+    button:hover { opacity: 0.9; }
+
+    .recommend {
+      background: var(--surface); border: 1px solid var(--border);
+      border-left: 4px solid var(--accent); border-radius: var(--radius);
+      padding: 16px 20px; margin: 16px 0 8px; font-size: 0.95rem;
+    }
+    .recommend.ok { border-left-color: var(--green); }
+    .recommend.fail { border-left-color: var(--red); }
+    .recommend h3 { font-size: 1.05rem; margin-bottom: 6px; }
+    .recommend .why { color: var(--text2); font-size: 0.85rem; margin-top: 6px; }
+
+    .table-wrap { overflow-x: auto; margin-bottom: 24px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    th {
+      background: var(--surface); color: var(--accent); text-align: left;
+      padding: 10px 12px; border-bottom: 2px solid var(--border);
+      position: sticky; top: 0; white-space: nowrap;
+    }
+    td { padding: 8px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    tr:hover td { background: rgba(88, 166, 255, 0.04); }
+
+    .tag {
+      display: inline-block; font-size: 0.7rem; padding: 1px 5px;
+      border-radius: 10px; font-weight: 600; vertical-align: middle; margin-left: 2px;
+    }
+    .tag-a100 { background: rgba(63, 185, 80, 0.12); color: var(--green); }
+    .tag-h100 { background: rgba(88, 166, 255, 0.14); color: var(--accent); }
+    .tag-h200 { background: rgba(188, 140, 255, 0.15); color: var(--purple); }
+    .tag-nofp8 { background: rgba(240, 136, 62, 0.15); color: var(--orange); }
+
+    .verdict { font-weight: 700; text-align: center; }
+    .verdict-pass { color: var(--green); }
+    .verdict-fail { color: var(--red); }
+    .reason { color: var(--text2); font-size: 0.74rem; font-style: italic; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .bound-mem { color: var(--yellow); }
+    .bound-cmp { color: var(--orange); }
+
+    .model-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 18px; margin-bottom: 8px;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px 18px;
+      font-size: 0.82rem;
+    }
+    .model-card .stat { display: flex; justify-content: space-between; gap: 10px; }
+    .model-card .stat-label { color: var(--text2); }
+
+    .legend {
+      display: flex; flex-wrap: wrap; gap: 18px; font-size: 0.8rem;
+      color: var(--text2); margin-bottom: 10px;
+    }
+    .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; }
+
+    .assumptions {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px 20px; margin-top: 8px;
+      font-size: 0.82rem; color: var(--text2);
+    }
+    .assumptions summary { color: var(--accent); cursor: pointer; font-weight: 600; font-size: 0.9rem; }
+    .assumptions ul { margin: 12px 0 0 18px; }
+    .assumptions li { margin-bottom: 8px; }
+    code {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 4px; padding: 1px 5px; font-size: 0.82em;
+    }
+
+    footer {
+      margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--border);
+      font-size: 0.85rem; color: var(--text2);
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+
+<body>
+
+  <h1>Qwen 3.6 27B — Azure GPU Sizing
+    <span class="badge badge-qwen">Qwen 3.6 27B</span>
+    <span class="badge badge-azure">Azure A100 / H100</span>
+  </h1>
+  <p class="subtitle">Pick the smallest Azure A100/H100 SKU that serves your concurrent users at your target per-user token rate.</p>
+
+  <!-- Model card -->
+  <h2>Model</h2>
+  <div class="model-card" id="modelCard"></div>
+
+  <!-- Configuration -->
+  <h2>Your Workload</h2>
+  <div class="input-panel">
+    <div class="input-grid">
+      <div class="primary-input">
+        <label for="users">Concurrent Users</label>
+        <input type="number" id="users" value="50" min="1" max="100000">
+        <div class="hint">Simultaneous in-flight requests</div>
+      </div>
+      <div class="primary-input">
+        <label for="tps">Target Tokens / sec <em>per user</em></label>
+        <input type="number" id="tps" value="40" min="1" max="2000">
+        <div class="hint">Decode speed each user should see</div>
+      </div>
+      <div>
+        <label for="inputTokens">Input Tokens</label>
+        <input type="number" id="inputTokens" value="8000" min="1" max="262144">
+        <div class="hint">Avg prompt length</div>
+      </div>
+      <div>
+        <label for="outputTokens">Output Tokens</label>
+        <input type="number" id="outputTokens" value="2000" min="1" max="262144">
+        <div class="hint">Avg generation length</div>
+      </div>
+      <div>
+        <label for="precision">Weight &amp; KV Precision</label>
+        <select id="precision">
+          <option value="fp8" selected>FP8 (1 byte)</option>
+          <option value="fp16">FP16 (2 bytes)</option>
+        </select>
+        <div class="hint">A100 dequantizes FP8 → FP16 for compute</div>
+      </div>
+      <div>
+        <label for="efficiency">System Efficiency (MBU/MFU)</label>
+        <input type="number" id="efficiency" value="85" min="10" max="100" step="5">
+        <div class="hint">% of roofline achieved (vLLM ≈ 80–90%)</div>
+      </div>
+    </div>
+    <button onclick="calculate()">Calculate</button>
+  </div>
+
+  <!-- Recommendation -->
+  <div id="recommend"></div>
+
+  <!-- Results -->
+  <h2>Azure SKU Sizing Results</h2>
+  <div class="legend">
+    <span><span class="dot" style="background:var(--green)"></span> Serves the workload</span>
+    <span><span class="dot" style="background:var(--red)"></span> Cannot meet target</span>
+    <span><span class="bound-mem">■</span> Memory-bandwidth bound</span>
+    <span><span class="bound-cmp">■</span> Compute bound</span>
+  </div>
+  <div class="table-wrap">
+    <table id="mainTable">
+      <thead></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- Methodology -->
+  <details class="assumptions" open>
+    <summary>Assumptions &amp; Methodology</summary>
+    <ul>
+      <li><strong>Two checks must both pass.</strong> A SKU serves the workload only if it
+        (1) <em>physically fits</em> weights + KV cache for all users, and
+        (2) sustains the <em>per-user token rate</em> at that concurrency.</li>
+      <li><strong>Decode is a roofline.</strong> Per generated token, the batch step time is
+        <code>t_step = max(memory_time, compute_time) / efficiency</code>:
+        <ul>
+          <li><code>memory_time = (weights + N × KV_per_user) / total_HBM_bandwidth</code> — weights and all sequences' KV are read from HBM each step.</li>
+          <li><code>compute_time = (2 × params_B × N) / (total_TFLOPS × 1000)</code> — matmul FLOPs for the batch.</li>
+        </ul>
+        Per-user rate = <code>1 / t_step</code>; aggregate = <code>N / t_step</code>. Tensor parallelism pools bandwidth and FLOPs across the SKU's GPUs.</li>
+      <li><strong>Per-user speed drops as users rise</strong> because KV reads grow with concurrency and context. The tool reports the per-user rate <em>at your requested N</em>, and the max users that still meet the target.</li>
+      <li><strong>KV cache (hybrid).</strong> Qwen 3.6 is a DeltaNet + attention hybrid: only the full-attention layers cache KV.
+        <code>KV_per_user = full_attn_layers × 2 × kv_heads × head_dim × bytes × (input + output)</code>.
+        DeltaNet layers use a small fixed recurrent state (excluded).</li>
+      <li><strong>Weights.</strong> FP8 = 1 byte/param (27 GB); FP16 = 2 bytes (54 GB).</li>
+      <li><strong>FP8 compute.</strong> H100/H200 run FP8 tensor cores (≈2× FP16 TFLOPS).
+        <span class="tag tag-nofp8">no FP8</span> <strong>A100 has no FP8 tensor cores</strong> — FP8 weights are read from HBM as 1 byte (bandwidth benefit) but dequantized to FP16 for matmul, so A100 compute uses FP16 TFLOPS.</li>
+      <li><strong>Memory-bound by design.</strong> At single-digit-to-hundreds batch sizes, 27B decode is almost always HBM-bandwidth bound, so faster memory (H100/H200) raises per-user speed more than extra FLOPs.</li>
+      <li><strong>Usable VRAM = 90% of card memory.</strong> Memory-fit and "max users" reserve ~10% for activations, allocator fragmentation, CUDA/NCCL context and paged-KV block tables (≈ vLLM's default <code>gpu_memory_utilization</code>).</li>
+      <li><strong>Units.</strong> Decimal GB throughout (1 GB = 10⁹ bytes), matching NVIDIA bandwidth (GB/s) and marketed GPU memory, so <code>memory_time = GB / (GB/s)</code> has no hidden GiB conversion error.</li>
+      <li><strong>Context capping.</strong> If input + output exceeds Qwen 3.6's 256K window, the calculation is capped and flagged ⚠️.</li>
+      <li><strong>Azure SKUs.</strong> GPU counts, memory, and bandwidth from Azure VM documentation and NVIDIA datasheets. NC = inference-optimized (1–4 GPUs); ND = 8-GPU NVLink/NVSwitch. Multi-GPU assumes tensor parallelism with full memory pooling.</li>
+      <li><strong>Multi-GPU is an optimistic upper bound.</strong> Pooling all GPUs' bandwidth/FLOPs ignores tensor-parallel all-reduce, kernel-launch latency and lower utilization at small batch —       so single-stream rates on 8-GPU SKUs (e.g. ~1000+ tok/s) are a ceiling, not a guarantee. Also, with only 4 KV heads the KV cache may not shard cleanly across TP=8 (some engines replicate it), which can raise KV memory/bandwidth on ND SKUs.</li>
+      <li><strong>This is a planning estimate</strong> (steady-state decode). It ignores prefill/TTFT, attention FLOPs, scheduler overhead and network. Validate with a load test before committing.</li>
+    </ul>
+  </details>
+
+  <footer>
+    <a href="coding-azure.html">← Azure Coding Sizing (max concurrent)</a> ·
+    <a href="index.html">General LLM Sizing Guide</a> ·
+    <a href="methodology.html">Methodology</a> ·
+    <a href="https://github.com/qoofyk/LLM_Sizing_Guide">GitHub</a>
+  </footer>
+
+  <script>
+    "use strict";
+
+    // ── Qwen 3.6 27B specs (consistent with coding-azure.html, Qwen3-Next hybrid arch) ──
+    const MODEL = {
+      name: "Qwen 3.6 27B",
+      params: 27,            // billion, dense
+      nLayers: 64,
+      nKvLayers: 16,         // full-attention layers that cache KV (¼ of layers; rest are DeltaNet)
+      nKvHeads: 4,
+      headDim: 256,
+      maxCtx: 262144,
+    };
+
+    // ── Azure A100/H100/H200 VM SKUs (Azure docs + NVIDIA datasheets) ──
+    // bwPerGpu = HBM bandwidth GB/s; tflopsFp16/tflopsFp8 = dense tensor-core TFLOPS per GPU.
+    // costWeight = approximate per-GPU on-demand cost proxy (A100=1) for ranking only — not a price quote.
+    const AZURE_SKUS = [
+      { name: "NC24ads_A100_v4",  gpu: "A100 80GB", cls: "a100", numGpus: 1, memPerGpu: 80,  totalMem: 80,   bwPerGpu: 1935, tflopsFp16: 312,   tflopsFp8: null, costWeight: 1.0 },
+      { name: "NC48ads_A100_v4",  gpu: "A100 80GB", cls: "a100", numGpus: 2, memPerGpu: 80,  totalMem: 160,  bwPerGpu: 1935, tflopsFp16: 312,   tflopsFp8: null, costWeight: 1.0 },
+      { name: "NC96ads_A100_v4",  gpu: "A100 80GB", cls: "a100", numGpus: 4, memPerGpu: 80,  totalMem: 320,  bwPerGpu: 1935, tflopsFp16: 312,   tflopsFp8: null, costWeight: 1.0 },
+      { name: "ND96amsr_A100_v4", gpu: "A100 80GB", cls: "a100", numGpus: 8, memPerGpu: 80,  totalMem: 640,  bwPerGpu: 2039, tflopsFp16: 312,   tflopsFp8: null, costWeight: 1.0 },
+      { name: "NC40ads_H100_v5",  gpu: "H100 NVL",  cls: "h100", numGpus: 1, memPerGpu: 94,  totalMem: 94,   bwPerGpu: 3900, tflopsFp16: 835.5, tflopsFp8: 1671, costWeight: 1.9 },
+      { name: "NC80adis_H100_v5", gpu: "H100 NVL",  cls: "h100", numGpus: 2, memPerGpu: 94,  totalMem: 188,  bwPerGpu: 3900, tflopsFp16: 835.5, tflopsFp8: 1671, costWeight: 1.9 },
+      { name: "ND96isr_H100_v5",  gpu: "H100 SXM",  cls: "h100", numGpus: 8, memPerGpu: 80,  totalMem: 640,  bwPerGpu: 3350, tflopsFp16: 989.5, tflopsFp8: 1979, costWeight: 1.9 },
+      { name: "ND96isr_H200_v5",  gpu: "H200 SXM",  cls: "h200", numGpus: 8, memPerGpu: 141, totalMem: 1128, bwPerGpu: 4800, tflopsFp16: 989.5, tflopsFp8: 1979, costWeight: 2.4 },
+    ];
+
+    // Unit convention: decimal GB throughout, matching NVIDIA bandwidth specs (GB/s) and
+    // marketed GPU memory (GB). 1 GB = 1e9 bytes. Keeping memory and bandwidth in the same
+    // base avoids a ~7% GB-vs-GiB error in memory_time = GB / (GB/s).
+    const GB = 1_000_000_000;
+
+    // Usable VRAM fraction: real inference engines (e.g. vLLM gpu_memory_utilization) reserve
+    // headroom for activations, fragmentation, CUDA/NCCL context and block tables.
+    const USABLE_MEM = 0.90;
+
+    // ── Helpers ──
+    function precBytes() { return document.getElementById("precision").value === "fp8" ? 1 : 2; }
+    function isFp8() { return document.getElementById("precision").value === "fp8"; }
+
+    function weightGb() { return MODEL.params * precBytes(); }
+    function usableMem(sku) { return sku.totalMem * USABLE_MEM; }
+
+    // KV cache per request (GB) for the hybrid model at given total tokens
+    function kvPerUserGb(totalTokens) {
+      const bytes = MODEL.nKvLayers * 2 * MODEL.nKvHeads * MODEL.headDim * precBytes() * totalTokens;
+      return bytes / GB;
+    }
+
+    // Effective per-GPU compute: A100 has no FP8 tensor cores → always FP16 path.
+    function effectiveTflopsPerGpu(sku) {
+      if (isFp8() && sku.tflopsFp8 !== null) return sku.tflopsFp8;
+      return sku.tflopsFp16;
+    }
+
+    // Decode step roofline for a given batch size N. Returns time per token (seconds) + bound type.
+    function stepTime(sku, nUsers, kvGb, eff) {
+      const totalBw = sku.numGpus * sku.bwPerGpu;                 // GB/s
+      const totalTflops = sku.numGpus * effectiveTflopsPerGpu(sku); // TFLOP/s
+      const memTime = (weightGb() + nUsers * kvGb) / totalBw;     // s
+      const cmpTime = (2 * MODEL.params * nUsers) / (totalTflops * 1000); // s
+      const raw = Math.max(memTime, cmpTime);
+      return { t: raw / eff, bound: memTime >= cmpTime ? "mem" : "cmp" };
+    }
+
+    // Largest N that meets target tps AND fits in usable memory. tps decreases monotonically with N.
+    function maxUsers(sku, kvGb, targetTps, eff) {
+      const memCapUsers = Math.floor((usableMem(sku) - weightGb()) / kvGb);
+      if (memCapUsers <= 0) return 0;
+      let lo = 0, hi = memCapUsers;
+      // binary search for largest N with per-user tps >= target
+      while (lo < hi) {
+        const mid = Math.ceil((lo + hi) / 2);
+        const st = stepTime(sku, mid, kvGb, eff);
+        if (1 / st.t >= targetTps) lo = mid; else hi = mid - 1;
+      }
+      return lo;
+    }
+
+    function fmtCtx(t) {
+      if (t >= 1000) return (t / 1000).toFixed(0) + "K";
+      return String(t);
+    }
+    function fmtUsers(n) { return n >= 100000 ? "100K+" : n.toLocaleString(); }
+
+    // ── Model card ──
+    function renderModelCard() {
+      const kv10k = kvPerUserGb(10000);
+      document.getElementById("modelCard").innerHTML = `
+        <div class="stat"><span class="stat-label">Parameters</span><span>27B (dense)</span></div>
+        <div class="stat"><span class="stat-label">Layers</span><span>${MODEL.nLayers} (${MODEL.nKvLayers} full-attn + ${MODEL.nLayers - MODEL.nKvLayers} DeltaNet)</span></div>
+        <div class="stat"><span class="stat-label">KV heads / head dim</span><span>${MODEL.nKvHeads} × ${MODEL.headDim}</span></div>
+        <div class="stat"><span class="stat-label">Max context</span><span>${fmtCtx(MODEL.maxCtx)}</span></div>
+        <div class="stat"><span class="stat-label">Weights</span><span>${weightGb().toFixed(0)} GB (${isFp8() ? "FP8" : "FP16"})</span></div>
+        <div class="stat"><span class="stat-label">KV @ 10K ctx</span><span>${(kv10k * 1000).toFixed(0)} MB/user</span></div>`;
+    }
+
+    function skuTag(sku) {
+      const cls = sku.cls === "a100" ? "tag-a100" : sku.cls === "h100" ? "tag-h100" : "tag-h200";
+      let t = `<span class="tag ${cls}">${sku.gpu}</span>`;
+      if (sku.cls === "a100" && isFp8()) t += `<span class="tag tag-nofp8" title="A100 has no FP8 tensor cores; compute uses FP16">no FP8</span>`;
+      return t;
+    }
+
+    // ── Main calculation ──
+    function calculate() {
+      const nUsers = Math.max(1, Math.floor(+document.getElementById("users").value || 1));
+      const targetTps = Math.max(1, +document.getElementById("tps").value || 1);
+      const inTok = Math.max(1, Math.floor(+document.getElementById("inputTokens").value || 1));
+      const outTok = Math.max(1, Math.floor(+document.getElementById("outputTokens").value || 1));
+      const eff = Math.min(1, Math.max(0.1, (+document.getElementById("efficiency").value || 85) / 100));
+
+      const requestedTotal = inTok + outTok;
+      const capped = requestedTotal > MODEL.maxCtx;
+      const effCtx = Math.min(requestedTotal, MODEL.maxCtx);
+      const kvGb = kvPerUserGb(effCtx);
+      const wt = weightGb();
+
+      renderModelCard();
+
+      // Header
+      let head = `<tr>
+        <th>Azure SKU</th><th>GPUs</th><th class="num">Total VRAM</th>
+        <th class="num">Mem used @ ${fmtUsers(nUsers)}</th>
+        <th class="num">Per-user tok/s @ ${fmtUsers(nUsers)}</th>
+        <th class="num">Aggregate tok/s</th>
+        <th class="num">Max users @ ${targetTps} tok/s</th>
+        <th>Serves ${fmtUsers(nUsers)} @ ${targetTps}?</th>
+      </tr>`;
+      document.querySelector("#mainTable thead").innerHTML = head;
+
+      let body = "";
+      const passing = [];
+
+      AZURE_SKUS.forEach(sku => {
+        const memUsed = wt + nUsers * kvGb;
+        const avail = usableMem(sku);
+        const fits = memUsed <= avail && wt < avail;
+        const st = stepTime(sku, nUsers, kvGb, eff);
+        const perUser = 1 / st.t;
+        const aggregate = nUsers / st.t;
+        const mUsers = maxUsers(sku, kvGb, targetTps, eff);
+
+        const speedOk = fits && perUser >= targetTps;
+        const pass = fits && speedOk;
+        if (pass) passing.push({ sku, mUsers, cost: sku.numGpus * sku.costWeight });
+
+        // reason on failure
+        let reason = "";
+        if (!fits) {
+          if (wt >= avail) reason = `weights (${wt.toFixed(0)} GB) &gt; usable VRAM`;
+          else reason = `needs ${memUsed.toFixed(0)} GB &gt; ${avail.toFixed(0)} GB usable`;
+        } else if (!speedOk) {
+          reason = `peaks at ${perUser.toFixed(0)} tok/s (&lt; ${targetTps})`;
+        }
+
+        const boundCls = st.bound === "mem" ? "bound-mem" : "bound-cmp";
+        const boundLabel = st.bound === "mem" ? "mem-bw" : "compute";
+
+        body += `<tr>`;
+        body += `<td>${sku.name} ${skuTag(sku)}</td>`;
+        body += `<td>${sku.numGpus}×</td>`;
+        body += `<td class="num">${sku.totalMem} GB</td>`;
+        body += `<td class="num">${fits ? memUsed.toFixed(0) + " GB" : '<span class="verdict-fail">' + memUsed.toFixed(0) + " GB</span>"}</td>`;
+        body += `<td class="num"><span class="${boundCls}" title="${boundLabel} bound">${fits ? perUser.toFixed(0) : "—"}</span></td>`;
+        body += `<td class="num">${fits ? aggregate.toFixed(0) : "—"}</td>`;
+        body += `<td class="num">${fmtUsers(mUsers)}</td>`;
+        if (pass) {
+          body += `<td class="verdict verdict-pass" title="${boundLabel} bound">✓ Yes</td>`;
+        } else {
+          body += `<td class="verdict verdict-fail">✗ No<br><span class="reason">${reason}</span></td>`;
+        }
+        body += `</tr>`;
+      });
+      document.querySelector("#mainTable tbody").innerHTML = body;
+
+      // Recommendation: smallest passing SKU (SKUs are ordered cheapest → largest)
+      const rec = document.getElementById("recommend");
+      const ctxNote = capped
+        ? ` <span class="bound-mem">⚠️ context capped to ${fmtCtx(MODEL.maxCtx)} (Qwen 3.6 max)</span>`
+        : "";
+      if (passing.length > 0) {
+        // Rank by approximate cost proxy (GPU count × class weight), then fewest GPUs.
+        passing.sort((a, b) => a.cost - b.cost || a.sku.numGpus - b.sku.numGpus);
+        const best = passing[0];
+        rec.className = "recommend ok";
+        rec.innerHTML = `<h3>✓ Recommended: ${best.sku.name}</h3>
+          <div>${best.sku.numGpus}× ${best.sku.gpu} (${best.sku.totalMem} GB) serves
+          <strong>${fmtUsers(nUsers)} concurrent users</strong> at
+          <strong>≥ ${targetTps} tok/s</strong> each
+          (${inTok.toLocaleString()} in + ${outTok.toLocaleString()} out, ${isFp8() ? "FP8" : "FP16"}).
+          It has headroom to about <strong>${fmtUsers(best.mUsers)} users</strong> at this target.${ctxNote}</div>
+          <div class="why">Lowest-cost of ${passing.length} viable SKU${passing.length > 1 ? "s" : ""}
+          (ranked by GPU count × class — an approximate proxy, not a price quote). Larger SKUs add capacity/redundancy.</div>`;
+      } else {
+        rec.className = "recommend fail";
+        rec.innerHTML = `<h3>✗ No single SKU meets this target</h3>
+          <div>None of the listed A100/H100/H200 SKUs sustain <strong>${targetTps} tok/s</strong> per user
+          for <strong>${fmtUsers(nUsers)} concurrent users</strong> at this context.${ctxNote}</div>
+          <div class="why">Options: lower the per-user target or concurrency, shorten context, use FP8,
+          or scale out across multiple VM instances behind a load balancer (each instance serves a share of users).</div>`;
+      }
+    }
+
+    // ── Init ──
+    renderModelCard();
+    calculate();
+  </script>
+</body>
+
+</html>
