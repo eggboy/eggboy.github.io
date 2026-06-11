@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Qwen 3.6 27B — Azure A100/H100 Sizing</title>
+  <title>Qwen 3.6 27B — Azure GPU Sizing</title>
   <style>
     :root {
       --bg: #0d1117;
@@ -89,6 +89,8 @@
       display: inline-block; font-size: 0.7rem; padding: 1px 5px;
       border-radius: 10px; font-weight: 600; vertical-align: middle; margin-left: 2px;
     }
+    .tag-t4 { background: rgba(210, 153, 34, 0.15); color: var(--yellow); }
+    .tag-a10 { background: rgba(86, 211, 221, 0.15); color: #56d4dd; }
     .tag-a100 { background: rgba(63, 185, 80, 0.12); color: var(--green); }
     .tag-h100 { background: rgba(88, 166, 255, 0.14); color: var(--accent); }
     .tag-h200 { background: rgba(188, 140, 255, 0.15); color: var(--purple); }
@@ -143,9 +145,9 @@
 
   <h1>Qwen 3.6 27B — Azure GPU Sizing
     <span class="badge badge-qwen">Qwen 3.6 27B</span>
-    <span class="badge badge-azure">Azure A100 / H100</span>
+    <span class="badge badge-azure">Azure T4 → H200</span>
   </h1>
-  <p class="subtitle">Pick the smallest Azure A100/H100 SKU that serves your concurrent users at your target per-user token rate.</p>
+  <p class="subtitle">Pick the smallest Azure GPU SKU (T4, A10, A100, H100, H200) that serves your concurrent users at your target per-user token rate.</p>
 
   <!-- Model card -->
   <h2>Model</h2>
@@ -181,7 +183,7 @@
           <option value="fp8" selected>FP8 (1 byte)</option>
           <option value="fp16">FP16 (2 bytes)</option>
         </select>
-        <div class="hint">A100 dequantizes FP8 → FP16 for compute</div>
+        <div class="hint">A100/A10/T4 dequantize FP8 → FP16 for compute</div>
       </div>
       <div>
         <label for="efficiency">System Efficiency (MBU/MFU)</label>
@@ -233,12 +235,12 @@
         DeltaNet layers use a small fixed recurrent state (excluded).</li>
       <li><strong>Weights.</strong> FP8 = 1 byte/param (27 GB); FP16 = 2 bytes (54 GB).</li>
       <li><strong>FP8 compute.</strong> H100/H200 run FP8 tensor cores (≈2× FP16 TFLOPS).
-        <span class="tag tag-nofp8">no FP8</span> <strong>A100 has no FP8 tensor cores</strong> — FP8 weights are read from HBM as 1 byte (bandwidth benefit) but dequantized to FP16 for matmul, so A100 compute uses FP16 TFLOPS.</li>
+        <span class="tag tag-nofp8">no FP8</span> <strong>A100, A10 and T4 have no FP8 tensor cores</strong> — FP8 weights are read from HBM as 1 byte (bandwidth benefit) but dequantized to FP16 for matmul, so their compute uses FP16 TFLOPS.</li>
       <li><strong>Memory-bound by design.</strong> At single-digit-to-hundreds batch sizes, 27B decode is almost always HBM-bandwidth bound, so faster memory (H100/H200) raises per-user speed more than extra FLOPs.</li>
       <li><strong>Usable VRAM = 90% of card memory.</strong> Memory-fit and "max users" reserve ~10% for activations, allocator fragmentation, CUDA/NCCL context and paged-KV block tables (≈ vLLM's default <code>gpu_memory_utilization</code>).</li>
       <li><strong>Units.</strong> Decimal GB throughout (1 GB = 10⁹ bytes), matching NVIDIA bandwidth (GB/s) and marketed GPU memory, so <code>memory_time = GB / (GB/s)</code> has no hidden GiB conversion error.</li>
       <li><strong>Context capping.</strong> If input + output exceeds Qwen 3.6's 256K window, the calculation is capped and flagged ⚠️.</li>
-      <li><strong>Azure SKUs.</strong> GPU counts, memory, and bandwidth from Azure VM documentation and NVIDIA datasheets. NC = inference-optimized (1–4 GPUs); ND = 8-GPU NVLink/NVSwitch. Multi-GPU assumes tensor parallelism with full memory pooling.</li>
+      <li><strong>Azure SKUs.</strong> GPU counts, memory, and bandwidth from Azure VM documentation and NVIDIA datasheets. NC/NV = inference- and visualization-optimized (1–4 GPUs); ND = 8-GPU NVLink/NVSwitch. Multi-GPU assumes tensor parallelism with full memory pooling.</li>
       <li><strong>Multi-GPU is an optimistic upper bound.</strong> Pooling all GPUs' bandwidth/FLOPs ignores tensor-parallel all-reduce, kernel-launch latency and lower utilization at small batch —       so single-stream rates on 8-GPU SKUs (e.g. ~1000+ tok/s) are a ceiling, not a guarantee. Also, with only 4 KV heads the KV cache may not shard cleanly across TP=8 (some engines replicate it), which can raise KV memory/bandwidth on ND SKUs.</li>
       <li><strong>This is a planning estimate</strong> (steady-state decode). It ignores prefill/TTFT, attention FLOPs, scheduler overhead and network. Validate with a load test before committing.</li>
     </ul>
@@ -265,10 +267,12 @@
       maxCtx: 262144,
     };
 
-    // ── Azure A100/H100/H200 VM SKUs (Azure docs + NVIDIA datasheets) ──
+    // ── Azure T4/A10/A100/H100/H200 VM SKUs (Azure docs + NVIDIA datasheets) ──
     // bwPerGpu = HBM bandwidth GB/s; tflopsFp16/tflopsFp8 = dense tensor-core TFLOPS per GPU.
     // costWeight = approximate per-GPU on-demand cost proxy (A100=1) for ranking only — not a price quote.
     const AZURE_SKUS = [
+      { name: "NC64as_T4_v3",     gpu: "T4 16GB",   cls: "t4",   numGpus: 4, memPerGpu: 16,  totalMem: 64,   bwPerGpu: 320,  tflopsFp16: 65,    tflopsFp8: null, costWeight: 0.15 },
+      { name: "NV72ads_A10_v5",   gpu: "A10 24GB",  cls: "a10",  numGpus: 2, memPerGpu: 24,  totalMem: 48,   bwPerGpu: 600,  tflopsFp16: 125,   tflopsFp8: null, costWeight: 0.9 },
       { name: "NC24ads_A100_v4",  gpu: "A100 80GB", cls: "a100", numGpus: 1, memPerGpu: 80,  totalMem: 80,   bwPerGpu: 1935, tflopsFp16: 312,   tflopsFp8: null, costWeight: 1.0 },
       { name: "NC48ads_A100_v4",  gpu: "A100 80GB", cls: "a100", numGpus: 2, memPerGpu: 80,  totalMem: 160,  bwPerGpu: 1935, tflopsFp16: 312,   tflopsFp8: null, costWeight: 1.0 },
       { name: "NC96ads_A100_v4",  gpu: "A100 80GB", cls: "a100", numGpus: 4, memPerGpu: 80,  totalMem: 320,  bwPerGpu: 1935, tflopsFp16: 312,   tflopsFp8: null, costWeight: 1.0 },
@@ -350,9 +354,10 @@
     }
 
     function skuTag(sku) {
-      const cls = sku.cls === "a100" ? "tag-a100" : sku.cls === "h100" ? "tag-h100" : "tag-h200";
+      const clsMap = { t4: "tag-t4", a10: "tag-a10", a100: "tag-a100", h100: "tag-h100", h200: "tag-h200" };
+      const cls = clsMap[sku.cls] || "tag-a100";
       let t = `<span class="tag ${cls}">${sku.gpu}</span>`;
-      if (sku.cls === "a100" && isFp8()) t += `<span class="tag tag-nofp8" title="A100 has no FP8 tensor cores; compute uses FP16">no FP8</span>`;
+      if (sku.tflopsFp8 === null && isFp8()) t += `<span class="tag tag-nofp8" title="${sku.gpu} has no FP8 tensor cores; compute uses FP16">no FP8</span>`;
       return t;
     }
 
@@ -457,7 +462,7 @@
       } else {
         rec.className = "recommend fail";
         rec.innerHTML = `<h3>✗ No listed SKU can meet this target</h3>
-          <div>On every listed A100/H100/H200 SKU, a single VM either can't fit the model plus one user's KV cache,
+          <div>On every listed T4/A10/A100/H100/H200 SKU, a single VM either can't fit the model plus one user's KV cache,
           or can't sustain <strong>${targetTps} tok/s</strong> for even one user at this context.
           Adding VMs won't help — each replica has the same per-user ceiling.${ctxNote}</div>
           <div class="why">Options: lower the per-user target, shorten context, or use FP8 to cut weight + KV bandwidth.</div>`;
