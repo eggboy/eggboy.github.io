@@ -214,9 +214,12 @@
   <details class="assumptions" open>
     <summary>Assumptions &amp; Methodology</summary>
     <ul>
-      <li><strong>Two checks must both pass.</strong> A SKU serves the workload only if it
-        (1) <em>physically fits</em> weights + KV cache for all users, and
-        (2) sustains the <em>per-user token rate</em> at that concurrency.</li>
+      <li><strong>How the VM count is derived.</strong> Each VM (one node of the SKU) serves up to its
+        <em>max users at the target rate</em> — the largest batch that both (1) fits weights + KV cache in VRAM and
+        (2) still sustains the per-user token rate. The tool then sizes
+        <code>VMs needed = ⌈your users ÷ max users per VM⌉</code>, spreading users evenly across identical
+        replicas behind a load balancer. A SKU is marked ✗ only when even one VM can't host a single user at the
+        target — adding more VMs can't fix a per-user ceiling.</li>
       <li><strong>Decode is a roofline.</strong> Per generated token, the batch step time is
         <code>t_step = max(memory_time, compute_time) / efficiency</code>:
         <ul>
@@ -224,7 +227,7 @@
           <li><code>compute_time = (2 × params_B × N) / (total_TFLOPS × 1000)</code> — matmul FLOPs for the batch.</li>
         </ul>
         Per-user rate = <code>1 / t_step</code>; aggregate = <code>N / t_step</code>. Tensor parallelism pools bandwidth and FLOPs across the SKU's GPUs.</li>
-      <li><strong>Per-user speed drops as users rise</strong> because KV reads grow with concurrency and context. The tool reports the per-user rate <em>at your requested N</em>, and the max users that still meet the target.</li>
+      <li><strong>Per-user speed drops as users rise</strong> because KV reads grow with concurrency and context. Each VM is loaded only up to the point where it still meets the target, so the tool reports the per-user rate at that balanced per-VM load, and the max users a single VM sustains.</li>
       <li><strong>KV cache (hybrid).</strong> Qwen 3.6 is a DeltaNet + attention hybrid: only the full-attention layers cache KV.
         <code>KV_per_user = full_attn_layers × 2 × kv_heads × head_dim × bytes × (input + output)</code>.
         DeltaNet layers use a small fixed recurrent state (excluded).</li>
@@ -355,10 +358,10 @@
 
     // ── Main calculation ──
     function calculate() {
-      const nUsers = Math.max(1, Math.floor(+document.getElementById("users").value || 1));
-      const targetTps = Math.max(1, +document.getElementById("tps").value || 1);
-      const inTok = Math.max(1, Math.floor(+document.getElementById("inputTokens").value || 1));
-      const outTok = Math.max(1, Math.floor(+document.getElementById("outputTokens").value || 1));
+      const nUsers = Math.min(100000, Math.max(1, Math.floor(+document.getElementById("users").value || 1)));
+      const targetTps = Math.min(2000, Math.max(1, +document.getElementById("tps").value || 1));
+      const inTok = Math.min(262144, Math.max(1, Math.floor(+document.getElementById("inputTokens").value || 1)));
+      const outTok = Math.min(262144, Math.max(1, Math.floor(+document.getElementById("outputTokens").value || 1)));
       const eff = Math.min(1, Math.max(0.1, (+document.getElementById("efficiency").value || 85) / 100));
 
       const requestedTotal = inTok + outTok;
@@ -371,11 +374,11 @@
 
       // Header
       let head = `<tr>
-        <th>Azure SKU</th><th>GPUs</th><th class="num">Total VRAM</th>
-        <th class="num">Mem used @ ${fmtUsers(nUsers)}</th>
-        <th class="num">Per-user tok/s @ ${fmtUsers(nUsers)}</th>
+        <th>Azure SKU</th><th>GPUs / VM</th><th>VMs needed</th><th class="num">VRAM / VM</th>
+        <th class="num">VRAM used / VM</th>
+        <th class="num">Per-user tok/s</th>
         <th class="num">Aggregate tok/s</th>
-        <th class="num">Max users @ ${targetTps} tok/s</th>
+        <th class="num">Max users / VM @ ${targetTps}</th>
         <th>Serves ${fmtUsers(nUsers)} @ ${targetTps}?</th>
       </tr>`;
       document.querySelector("#mainTable thead").innerHTML = head;
@@ -384,25 +387,31 @@
       const passing = [];
 
       AZURE_SKUS.forEach(sku => {
-        const memUsed = wt + nUsers * kvGb;
         const avail = usableMem(sku);
-        const fits = memUsed <= avail && wt < avail;
-        const st = stepTime(sku, nUsers, kvGb, eff);
-        const perUser = 1 / st.t;
-        const aggregate = nUsers / st.t;
-        const mUsers = maxUsers(sku, kvGb, targetTps, eff);
+        const wtFits = wt < avail;
+        const memCapUsers = wtFits ? Math.floor((avail - wt) / kvGb) : 0;
+        const mUsers = maxUsers(sku, kvGb, targetTps, eff);   // max users one VM serves at target
+        const feasible = mUsers > 0;
 
-        const speedOk = fits && perUser >= targetTps;
-        const pass = fits && speedOk;
-        if (pass) passing.push({ sku, mUsers, cost: sku.numGpus * sku.costWeight });
+        // Balanced horizontal scaling: spread users across identical replicas.
+        const vms = feasible ? Math.ceil(nUsers / mUsers) : 0;
+        const perVmUsers = feasible ? Math.ceil(nUsers / vms) : 0;
+        const st = stepTime(sku, Math.max(1, perVmUsers), kvGb, eff);
+        const perUser = 1 / st.t;                 // ≥ target, since perVmUsers ≤ mUsers
+        const memUsedPerVm = wt + perVmUsers * kvGb;
+        const aggregate = nUsers * perUser;       // fleet throughput (all VMs run in parallel)
 
-        // reason on failure
+        if (feasible) passing.push({ sku, vms, mUsers, perUser, cost: vms * sku.numGpus * sku.costWeight });
+
+        // reason on infeasibility (no number of VMs can help — every replica has the same ceiling)
         let reason = "";
-        if (!fits) {
-          if (wt >= avail) reason = `weights (${wt.toFixed(0)} GB) &gt; usable VRAM`;
-          else reason = `needs ${memUsed.toFixed(0)} GB &gt; ${avail.toFixed(0)} GB usable`;
-        } else if (!speedOk) {
-          reason = `peaks at ${perUser.toFixed(0)} tok/s (&lt; ${targetTps})`;
+        if (!wtFits) {
+          reason = `weights (${wt.toFixed(0)} GB) &gt; ${avail.toFixed(0)} GB usable / VM`;
+        } else if (memCapUsers < 1) {
+          reason = `no VRAM left for KV (${avail.toFixed(0)} GB − ${wt.toFixed(0)} GB weights)`;
+        } else {
+          const oneUser = 1 / stepTime(sku, 1, kvGb, eff).t;
+          reason = `1 user peaks at ${oneUser.toFixed(0)} tok/s (&lt; ${targetTps})`;
         }
 
         const boundCls = st.bound === "mem" ? "bound-mem" : "bound-cmp";
@@ -411,13 +420,14 @@
         body += `<tr>`;
         body += `<td>${sku.name} ${skuTag(sku)}</td>`;
         body += `<td>${sku.numGpus}×</td>`;
+        body += `<td class="num">${feasible ? "<strong>" + vms + "</strong>" : '<span class="verdict-fail">—</span>'}</td>`;
         body += `<td class="num">${sku.totalMem} GB</td>`;
-        body += `<td class="num">${fits ? memUsed.toFixed(0) + " GB" : '<span class="verdict-fail">' + memUsed.toFixed(0) + " GB</span>"}</td>`;
-        body += `<td class="num"><span class="${boundCls}" title="${boundLabel} bound">${fits ? perUser.toFixed(0) : "—"}</span></td>`;
-        body += `<td class="num">${fits ? aggregate.toFixed(0) : "—"}</td>`;
+        body += `<td class="num">${feasible ? memUsedPerVm.toFixed(0) + " GB" : "—"}</td>`;
+        body += `<td class="num"><span class="${boundCls}" title="${boundLabel} bound">${feasible ? perUser.toFixed(0) : "—"}</span></td>`;
+        body += `<td class="num">${feasible ? aggregate.toFixed(0) : "—"}</td>`;
         body += `<td class="num">${fmtUsers(mUsers)}</td>`;
-        if (pass) {
-          body += `<td class="verdict verdict-pass" title="${boundLabel} bound">✓ Yes</td>`;
+        if (feasible) {
+          body += `<td class="verdict verdict-pass" title="${boundLabel} bound">✓ ${vms} VM${vms === 1 ? "" : "s"}</td>`;
         } else {
           body += `<td class="verdict verdict-fail">✗ No<br><span class="reason">${reason}</span></td>`;
         }
@@ -425,31 +435,32 @@
       });
       document.querySelector("#mainTable tbody").innerHTML = body;
 
-      // Recommendation: smallest passing SKU (SKUs are ordered cheapest → largest)
+      // Recommendation: lowest total-cost viable SKU (ranked below)
       const rec = document.getElementById("recommend");
       const ctxNote = capped
         ? ` <span class="bound-mem">⚠️ context capped to ${fmtCtx(MODEL.maxCtx)} (Qwen 3.6 max)</span>`
         : "";
       if (passing.length > 0) {
-        // Rank by approximate cost proxy (GPU count × class weight), then fewest GPUs.
-        passing.sort((a, b) => a.cost - b.cost || a.sku.numGpus - b.sku.numGpus);
+        // Rank by total cost proxy (fleet GPUs × class weight), then fewest VMs, then fewest GPUs/VM.
+        passing.sort((a, b) => a.cost - b.cost || a.vms - b.vms || a.sku.numGpus - b.sku.numGpus);
         const best = passing[0];
+        const v = best.vms;
         rec.className = "recommend ok";
         rec.innerHTML = `<h3>✓ Recommended: ${best.sku.name}</h3>
-          <div>${best.sku.numGpus}× ${best.sku.gpu} (${best.sku.totalMem} GB) serves
+          <div><strong>${v} VM${v === 1 ? "" : "s"}</strong> of ${best.sku.name} (${best.sku.numGpus}× ${best.sku.gpu} each, ${best.sku.totalMem} GB/VM) serve${v === 1 ? "s" : ""}
           <strong>${fmtUsers(nUsers)} concurrent users</strong> at
           <strong>≥ ${targetTps} tok/s</strong> each
           (${inTok.toLocaleString()} in + ${outTok.toLocaleString()} out, ${isFp8() ? "FP8" : "FP16"}).
-          It has headroom to about <strong>${fmtUsers(best.mUsers)} users</strong> at this target.${ctxNote}</div>
+          Each VM serves up to <strong>${fmtUsers(best.mUsers)} users</strong> at this target.${ctxNote}</div>
           <div class="why">Lowest-cost of ${passing.length} viable SKU${passing.length > 1 ? "s" : ""}
-          (ranked by GPU count × class — an approximate proxy, not a price quote). Larger SKUs add capacity/redundancy.</div>`;
+          (ranked by total GPUs × class — an approximate proxy, not a price quote). Replicas sit behind a load balancer, each serving a share of users.</div>`;
       } else {
         rec.className = "recommend fail";
-        rec.innerHTML = `<h3>✗ No single SKU meets this target</h3>
-          <div>None of the listed A100/H100/H200 SKUs sustain <strong>${targetTps} tok/s</strong> per user
-          for <strong>${fmtUsers(nUsers)} concurrent users</strong> at this context.${ctxNote}</div>
-          <div class="why">Options: lower the per-user target or concurrency, shorten context, use FP8,
-          or scale out across multiple VM instances behind a load balancer (each instance serves a share of users).</div>`;
+        rec.innerHTML = `<h3>✗ No listed SKU can meet this target</h3>
+          <div>On every listed A100/H100/H200 SKU, a single VM either can't fit the model plus one user's KV cache,
+          or can't sustain <strong>${targetTps} tok/s</strong> for even one user at this context.
+          Adding VMs won't help — each replica has the same per-user ceiling.${ctxNote}</div>
+          <div class="why">Options: lower the per-user target, shorten context, or use FP8 to cut weight + KV bandwidth.</div>`;
       }
     }
 
