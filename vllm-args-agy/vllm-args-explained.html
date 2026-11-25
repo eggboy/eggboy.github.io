@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>vLLM knobs, explained — Qwen3.8-27B on Cloud Run GPU</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,500;0,700;1,400&family=Roboto+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* Google Design System — Core Foundation (§2) */
+    --google-white:#ffffff;
+    --google-gray-050:#f8f9fa;
+    --google-gray-100:#f1f3f4;
+    --google-ink:#202124;
+    --google-muted:#5f6368;
+
+    /* Google Design System — Brand Accent System (§2) */
+    --google-blue:#4285f4;
+    --google-red:#ea4335;
+    --google-yellow:#fbbc05;
+    --google-green:#34a853;
+    --google-blue-deep:#1a73e8;
+
+    /* Google Design System — Structure Tokens (§2) */
+    --google-border:#dadce0;
+    --google-focus:rgba(26, 115, 232, 0.18);
+
+    /* Google Design System — Font Stack (§3) */
+    --font-display:"Google Sans","Product Sans",Arial,sans-serif;
+    --font-sans:"Google Sans","Roboto",Arial,sans-serif;
+    --font-mono:"Roboto Mono","SF Mono",Menlo,monospace;
+
+    /* Google Design System — Spacing Scale (§5) */
+    --space-2:4px;
+    --space-3:8px;
+    --space-4:12px;
+    --space-5:16px;
+    --space-6:24px;
+    --space-7:32px;
+    --space-8:48px;
+    --space-9:64px;
+
+    /* Google Design System — Elevation (§6) */
+    --shadow-soft:0 6px 16px rgba(60, 64, 67, 0.08);
+    --shadow-card:0 12px 28px rgba(60, 64, 67, 0.12);
+    --shadow-panel:0 8px 20px rgba(60, 64, 67, 0.08);
+
+    /* Mapped page tokens & WCAG AA accessible semantic accents on light surfaces */
+    --ink:var(--google-white);
+    --panel:var(--google-white);
+    --panel-2:var(--google-gray-050);
+    --line:var(--google-border);
+    --line-2:#9aa0a6;
+    --paper:var(--google-ink);
+    --paper-dim:var(--google-muted);
+    --paper-mute:var(--google-muted);
+
+    --amber:#a85500;
+    --amber-deep:#8f4700;
+    --amber-soft:#fef7e0;
+    --cyan:#1967d2;
+    --cyan-soft:#e8f0fe;
+    --mint:#137333;
+    --mint-soft:#e6f4ea;
+    --rose:#b31412;
+    --rose-soft:#fce8e6;
+    --violet:#7627bb;
+    --violet-fill:#9334e6;
+    --violet-soft:#f3e8fd;
+
+    --mono:var(--font-mono);
+    --serif:var(--font-display);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    background:var(--google-white);
+    color:var(--google-ink);
+    font-family:var(--font-sans);
+    font-size:16px;
+    font-weight:400;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--cyan);text-decoration:none}
+  a:hover{color:var(--google-blue-deep);text-decoration:underline}
+  a:focus-visible,button:focus-visible,input:focus-visible{
+    outline:none;
+    box-shadow:0 0 0 4px var(--google-focus);
+  }
+  code,kbd{font-family:var(--font-mono)}
+  :is(.sub,.hint,.card p,.node p,footer p) code{
+    background:var(--google-gray-100);
+    color:var(--google-ink);
+    padding:2px 6px;
+    border-radius:6px;
+    font-size:.875em;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:0 var(--space-7)}
+
+  /* Component primitives (§4) */
+  .button-primary{
+    background:var(--google-blue-deep);
+    color:var(--google-white);
+    border:none;
+    border-radius:999px;
+    min-height:44px;
+    padding:0 20px;
+    font-family:var(--font-sans);
+    font-size:14px;
+    font-weight:500;
+    cursor:pointer;
+  }
+  .button-primary:hover{background:#1765cc}
+  .button-secondary{
+    background:var(--google-white);
+    color:var(--google-blue-deep);
+    border:1px solid var(--google-border);
+    border-radius:999px;
+    min-height:44px;
+    padding:0 20px;
+    font-family:var(--font-sans);
+    font-size:14px;
+    font-weight:500;
+    cursor:pointer;
+  }
+  .input{
+    background:var(--google-white);
+    color:var(--google-ink);
+    border:1px solid var(--google-border);
+    border-radius:12px;
+    min-height:44px;
+    padding:12px 14px;
+    font-family:var(--font-sans);
+    font-size:14px;
+  }
+  .input:focus{
+    outline:none;
+    border-color:var(--google-blue-deep);
+    box-shadow:0 0 0 4px var(--google-focus);
+  }
+
+  /* ---------- hero ---------- */
+  header{
+    padding:var(--space-9) 0 var(--space-8);
+    background:var(--google-white);
+    border-bottom:1px solid var(--google-border);
+    position:relative;
+  }
+  .eyebrow{
+    color:var(--cyan);
+    letter-spacing:.03em;
+    text-transform:uppercase;
+    font-size:12px;
+    line-height:1.35;
+    font-weight:500;
+  }
+  h1{
+    font-family:var(--font-display);
+    font-weight:500;
+    font-size:clamp(40px,6vw,56px);
+    line-height:1.08;
+    margin:var(--space-4) 0 var(--space-5);
+    letter-spacing:-.02em;
+    color:var(--google-ink);
+  }
+  h1 em{font-style:normal;color:var(--google-blue-deep)}
+  .lede{max-width:760px;color:var(--google-muted);font-size:18px;line-height:1.6;margin:0}
+  .lede b{color:var(--google-ink);font-weight:500}
+  .cmd{
+    margin-top:var(--space-7);
+    background:var(--google-gray-050);
+    border:1px solid var(--google-border);
+    border-radius:28px;
+    padding:var(--space-6);
+    position:relative;
+    box-shadow:var(--shadow-soft);
+  }
+  .cmd::before{
+    content:"gcloud run deploy … --args=";
+    position:absolute;
+    top:-12px;
+    left:var(--space-6);
+    background:var(--google-white);
+    border:1px solid var(--google-border);
+    border-radius:999px;
+    padding:2px 12px;
+    color:var(--google-muted);
+    font-family:var(--font-mono);
+    font-size:12px;
+    font-weight:500;
+  }
+  .tok{
+    display:inline-flex;
+    align-items:center;
+    gap:var(--space-3);
+    margin:4px 6px 4px 0;
+    padding:6px 14px;
+    border-radius:999px;
+    border:1px solid var(--google-border);
+    background:var(--google-white);
+    color:var(--google-ink);
+    font-family:var(--font-mono);
+    font-size:12.5px;
+    font-weight:500;
+    cursor:pointer;
+    transition:transform .15s,border-color .15s,background .15s,box-shadow .15s;
+    animation:rise .5s cubic-bezier(.2,.8,.2,1) both;
+  }
+  .tok::before{content:"";width:8px;height:8px;border-radius:50%;flex:none}
+  .tok.c-mem::before{background:var(--google-yellow);border:1.5px solid var(--amber)}
+  .tok.c-sched::before{background:var(--google-blue)}
+  .tok.c-cache::before{background:var(--google-green);border:1px solid var(--mint)}
+  .tok.c-api::before{background:var(--violet-fill)}
+  .tok.c-net::before{background:var(--google-muted)}
+  .tok:hover{
+    transform:translateY(-2px);
+    border-color:var(--google-blue-deep);
+    background:var(--cyan-soft);
+    box-shadow:0 4px 10px rgba(60, 64, 67, 0.1);
+    text-decoration:none;
+  }
+  .tok .v{color:var(--cyan);font-weight:500}
+  .legend{
+    display:flex;
+    flex-wrap:wrap;
+    gap:var(--space-3) var(--space-5);
+    margin-top:var(--space-5);
+    font-size:12px;
+    font-weight:500;
+    line-height:1.35;
+    letter-spacing:.03em;
+    color:var(--google-muted);
+  }
+  .legend span::before{
+    content:"";
+    display:inline-block;
+    width:9px;
+    height:9px;
+    border-radius:50%;
+    margin-right:7px;
+    vertical-align:-1px;
+    background:var(--c);
+  }
+  .legend span:first-child::before{background:var(--google-yellow);border:1.5px solid var(--amber)}
+  .legend span:nth-child(2)::before{background:var(--google-blue)}
+  .legend span:nth-child(3)::before{background:var(--google-green);border:1px solid var(--mint)}
+  .legend span:nth-child(4)::before{background:var(--violet-fill)}
+  @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  /* ---------- sections ---------- */
+  section{
+    padding:var(--space-9) 0;
+    background:var(--google-white);
+    border-bottom:1px solid var(--google-border);
+  }
+  section:nth-of-type(odd){background:var(--google-gray-050)}
+  .sec-head{
+    display:grid;
+    grid-template-columns:72px 1fr;
+    gap:var(--space-5);
+    align-items:baseline;
+    margin-bottom:var(--space-7);
+  }
+  .num{
+    font-family:var(--font-display);
+    font-size:44px;
+    font-weight:500;
+    letter-spacing:-.015em;
+    color:var(--google-blue-deep);
+    line-height:1.1;
+  }
+  h2{
+    font-family:var(--font-display);
+    font-weight:500;
+    font-size:clamp(24px,3.2vw,32px);
+    margin:0;
+    line-height:1.15;
+    letter-spacing:-.01em;
+    color:var(--google-ink);
+  }
+  .sub{color:var(--google-muted);margin:var(--space-3) 0 0;max-width:780px;font-size:16px;line-height:1.6}
+  .sub b{color:var(--google-ink);font-weight:500}
+  .grid{display:grid;gap:var(--space-6)}
+  .g-2{grid-template-columns:minmax(300px,360px) 1fr}
+  .panel{
+    background:var(--google-white);
+    border:1px solid var(--google-border);
+    border-radius:28px;
+    padding:var(--space-6);
+    box-shadow:var(--shadow-panel);
+  }
+  .panel h3{
+    margin:0 0 var(--space-5);
+    font-family:var(--font-display);
+    font-size:12px;
+    line-height:1.35;
+    letter-spacing:.03em;
+    text-transform:uppercase;
+    color:var(--google-muted);
+    font-weight:500;
+  }
+
+  /* controls */
+  .ctl{margin:0 0 var(--space-5)}
+  .ctl:last-child{margin-bottom:0}
+  .ctl label{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    gap:var(--space-3);
+    font-size:14px;
+    line-height:1.5;
+    font-weight:500;
+    color:var(--google-ink);
+    margin-bottom:var(--space-3);
+  }
+  .ctl label code{color:var(--google-ink);font-size:13px;font-weight:500}
+  .ctl output{color:var(--cyan);font-family:var(--font-mono);font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+  input[type=range]{
+    width:100%;
+    appearance:none;
+    height:6px;
+    border-radius:999px;
+    background:linear-gradient(90deg,var(--google-blue-deep) var(--p,50%),var(--google-border) var(--p,50%));
+    outline:none;
+    cursor:pointer;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    appearance:none;
+    width:20px;
+    height:20px;
+    border-radius:50%;
+    background:var(--google-blue-deep);
+    border:2px solid var(--google-white);
+    box-shadow:0 1px 4px rgba(60, 64, 67, 0.3);
+    cursor:pointer;
+    transition:box-shadow .15s,transform .15s;
+  }
+  input[type=range]:hover::-webkit-slider-thumb,input[type=range]:focus-visible::-webkit-slider-thumb{
+    box-shadow:0 0 0 6px var(--google-focus);
+  }
+  input[type=range]::-moz-range-thumb{
+    width:16px;
+    height:16px;
+    border-radius:50%;
+    background:var(--google-blue-deep);
+    border:2px solid var(--google-white);
+    box-shadow:0 1px 4px rgba(60, 64, 67, 0.3);
+    cursor:pointer;
+  }
+  .seg{
+    display:flex;
+    gap:var(--space-2);
+    padding:var(--space-2);
+    background:var(--google-gray-100);
+    border:1px solid var(--google-border);
+    border-radius:999px;
+  }
+  .seg button{
+    flex:1;
+    min-height:40px;
+    background:transparent;
+    color:var(--google-muted);
+    border:0;
+    border-radius:999px;
+    padding:6px 12px;
+    font-family:var(--font-sans);
+    font-size:13.5px;
+    font-weight:500;
+    cursor:pointer;
+    transition:background .15s,color .15s,box-shadow .15s;
+  }
+  .seg button:hover:not(.on){background:rgba(32, 33, 36, 0.06);color:var(--google-ink)}
+  .seg button.on{
+    background:var(--google-blue-deep);
+    color:var(--google-white);
+    font-weight:500;
+    box-shadow:0 1px 3px rgba(60, 64, 67, 0.2);
+  }
+  .seg button.on:hover{background:#1765cc}
+  .hint{font-size:14px;line-height:1.5;color:var(--google-muted);margin-top:var(--space-3)}
+
+  /* memory bar */
+  .bar{
+    display:flex;
+    height:64px;
+    border-radius:16px;
+    overflow:hidden;
+    border:1px solid var(--google-border);
+    background:repeating-linear-gradient(135deg,var(--google-gray-050) 0 6px,var(--google-gray-100) 6px 12px);
+  }
+  .bar div{
+    position:relative;
+    height:100%;
+    transition:width .35s cubic-bezier(.2,.8,.2,1);
+    display:flex;
+    align-items:flex-end;
+    padding:8px;
+    font-size:11.5px;
+    white-space:nowrap;
+    overflow:hidden;
+    color:var(--google-ink);
+    font-weight:500;
+    border-right:1px solid var(--google-white);
+  }
+  .bar div:last-child{border-right:0}
+  .s-w{background:#dadce0}
+  .s-vis{background:#bdc1c6}
+  .s-act{background:#e9d2fd}
+  .s-gr{background:#aecbfa}
+  .s-mb{background:#a8dab5}
+  .s-kv{background:var(--google-yellow)}
+  .s-hr{background:transparent;color:var(--google-muted)!important;font-weight:400!important}
+  .ticks{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:11.5px;color:var(--google-muted);margin-top:var(--space-3);font-variant-numeric:tabular-nums}
+  .keys{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:var(--space-3) var(--space-5);margin-top:var(--space-5);font-size:13.5px;color:var(--google-ink)}
+  .keys div{display:flex;align-items:center;gap:var(--space-3)}
+  .keys i{width:12px;height:12px;border-radius:3px;flex:none;border:1px solid rgba(32, 33, 36, 0.2)}
+  .keys i.s-hr{background:repeating-linear-gradient(135deg,var(--google-gray-050) 0 3px,var(--google-gray-100) 3px 6px)}
+  .keys b{margin-left:auto;font-family:var(--font-mono);font-size:12.5px;font-weight:500;color:var(--google-muted);font-variant-numeric:tabular-nums}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:var(--space-4);margin-top:var(--space-6)}
+  .stat{
+    background:var(--google-gray-050);
+    border:1px solid var(--google-border);
+    border-radius:20px;
+    padding:var(--space-5);
+  }
+  .stat .l{font-size:12px;line-height:1.35;letter-spacing:.03em;text-transform:uppercase;color:var(--google-muted);font-weight:500}
+  .stat .n{
+    font-family:var(--font-display);
+    font-size:32px;
+    font-weight:500;
+    letter-spacing:-.01em;
+    line-height:1.15;
+    margin-top:6px;
+    color:var(--google-ink);
+    font-variant-numeric:tabular-nums;
+  }
+  .stat .n small{font-family:var(--font-mono);font-size:12px;font-weight:500;letter-spacing:0;color:var(--google-muted);margin-left:4px}
+  .stat .d{font-size:13px;line-height:1.5;color:var(--google-muted);margin-top:6px}
+  .stat.warn{background:#fef8f7;border-color:#f6aea9}
+  .stat.warn .n{color:var(--rose)}
+  .alert{
+    margin-top:var(--space-5);
+    padding:var(--space-4) var(--space-5);
+    border-radius:16px;
+    border:1px solid var(--google-red);
+    background:var(--rose-soft);
+    color:var(--rose);
+    font-size:14px;
+    line-height:1.5;
+    font-weight:500;
+    display:none;
+  }
+  .alert.show{display:block}
+  .ok{border-color:var(--google-green);background:var(--mint-soft);color:var(--mint)}
+
+  /* seat chart */
+  .seats{display:flex;flex-wrap:wrap;gap:6px;margin-top:var(--space-4)}
+  .seat{
+    width:24px;
+    height:24px;
+    border-radius:6px;
+    border:1.5px solid var(--google-border);
+    background:var(--google-gray-050);
+    position:relative;
+  }
+  .seat.fit{background:var(--amber-soft);border-color:var(--amber)}
+  .seat.kvcap{background:var(--rose-soft);border-color:var(--google-red)}
+  .seat.partial{background:linear-gradient(90deg,var(--amber-soft) var(--f),transparent var(--f));border-color:var(--amber-deep)}
+
+  /* timeline */
+  .tl{margin-top:var(--space-4)}
+  .tl .row{display:grid;grid-template-columns:140px 1fr;gap:var(--space-4);align-items:center;margin-bottom:var(--space-4)}
+  .tl .lab{font-size:13px;line-height:1.4;color:var(--google-muted)}
+  .tl .lab b{display:block;color:var(--google-ink);font-weight:500}
+  .track{
+    height:36px;
+    border:1px solid var(--google-border);
+    border-radius:10px;
+    background:var(--google-gray-100);
+    position:relative;
+    overflow:hidden;
+    display:flex;
+  }
+  .step{
+    height:100%;
+    border-right:1px solid var(--google-white);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:var(--font-mono);
+    font-size:10.5px;
+    color:var(--google-ink);
+    font-weight:500;
+    overflow:hidden;
+    white-space:nowrap;
+    transition:width .3s;
+  }
+  .step:last-child{border-right:0}
+  .st-p{background:var(--cyan);color:var(--google-white)}
+  .st-d{background:var(--google-green);color:var(--google-ink)}
+  .st-mix{background:linear-gradient(180deg,var(--google-blue) 0 60%,var(--google-green) 60%);color:var(--google-ink)}
+  .ruler{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:11.5px;color:var(--google-muted);margin-top:6px;font-variant-numeric:tabular-nums}
+  .pulse{
+    display:inline-block;
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:var(--google-red);
+    box-shadow:0 0 0 0 rgba(234, 67, 53, 0.55);
+    animation:pulse 1.6s infinite;
+    margin-right:6px;
+    vertical-align:1px;
+  }
+  @keyframes pulse{to{box-shadow:0 0 0 10px rgba(234, 67, 53, 0)}}
+
+  /* prefix cache grid */
+  .turns{display:grid;gap:10px;margin-top:var(--space-3)}
+  .turn{display:grid;grid-template-columns:116px 1fr 90px;gap:var(--space-4);align-items:center}
+  .turn .lab{font-family:var(--font-mono);font-size:12px;color:var(--google-muted);font-variant-numeric:tabular-nums}
+  .blocks{display:flex;flex-wrap:wrap;gap:3px}
+  .blk{width:14px;height:14px;border-radius:3px;background:var(--google-yellow);border:1px solid var(--amber)}
+  .blk.hit{background:#ceead6;border:1px solid #1e8e3e}
+  .blk.part{background:repeating-linear-gradient(45deg,var(--google-yellow) 0 3px,var(--amber-soft) 3px 6px);border:1px solid var(--amber)}
+  .turn .pct{font-family:var(--font-mono);font-size:12.5px;font-weight:500;text-align:right;color:var(--mint);font-variant-numeric:tabular-nums}
+
+  /* pipeline */
+  .pipe{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--space-5);align-items:stretch;margin-top:var(--space-4)}
+  .node{
+    background:var(--google-white);
+    border:1px solid var(--google-border);
+    border-radius:24px;
+    padding:20px 18px;
+    position:relative;
+    min-height:150px;
+    box-shadow:var(--shadow-soft);
+  }
+  .node+.node::before{
+    content:"→";
+    position:absolute;
+    left:-21px;
+    top:50%;
+    transform:translateY(-50%);
+    width:24px;
+    height:24px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--google-blue-deep);
+    font-size:14px;
+    font-weight:600;
+    background:var(--google-white);
+    border:1px solid var(--google-border);
+    box-shadow:0 2px 6px rgba(60, 64, 67, 0.08);
+    z-index:1;
+  }
+  .node h4{margin:0 0 var(--space-3);font-family:var(--font-mono);font-size:13px;color:var(--cyan);font-weight:600}
+  .node p{margin:0;font-size:14px;line-height:1.5;color:var(--google-muted)}
+  .node pre{
+    margin:10px 0 0;
+    font-family:var(--font-mono);
+    font-size:11.5px;
+    line-height:1.45;
+    color:var(--google-ink);
+    white-space:pre-wrap;
+    word-break:break-word;
+    background:var(--google-gray-050);
+    border-radius:12px;
+    padding:10px 12px;
+    border:1px solid var(--google-border);
+  }
+
+  /* perf mode */
+  .modes{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-5)}
+  .mode{
+    border:1px solid var(--google-border);
+    border-radius:28px;
+    padding:var(--space-6);
+    background:var(--google-white);
+    box-shadow:var(--shadow-panel);
+    transition:border-color .2s,box-shadow .2s,transform .2s;
+  }
+  .mode:hover{box-shadow:var(--shadow-card);transform:translateY(-2px)}
+  .mode.on{
+    border-color:var(--google-blue-deep);
+    box-shadow:0 0 0 4px var(--google-focus),var(--shadow-panel);
+  }
+  .mode h4{margin:0 0 var(--space-3);font-family:var(--font-mono);font-size:14px;font-weight:600;color:var(--google-ink)}
+  .mode .dial{display:flex;gap:6px;margin:8px 0 12px}
+  .mode .dial i{flex:1;height:8px;border-radius:999px;background:var(--google-gray-100);border:1px solid var(--google-border)}
+  .mode .dial i.f{background:var(--google-blue);border-color:var(--google-blue-deep)}
+  .mode p{margin:4px 0;font-size:14px;line-height:1.5;color:var(--google-muted)}
+
+  /* reference cards */
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:var(--space-5)}
+  .card{
+    background:var(--google-white);
+    border:1px solid var(--google-border);
+    border-radius:28px;
+    padding:var(--space-6);
+    position:relative;
+    scroll-margin-top:24px;
+    box-shadow:var(--shadow-panel);
+    transition:border-color .25s,box-shadow .25s,transform .2s;
+  }
+  .card:hover{box-shadow:var(--shadow-card);transform:translateY(-2px)}
+  .card:target{
+    border-color:var(--google-blue-deep);
+    box-shadow:0 0 0 4px var(--google-focus),var(--shadow-card);
+  }
+  .card .flag{
+    font-family:var(--font-mono);
+    font-size:15px;
+    font-weight:600;
+    color:var(--google-ink);
+    padding-right:100px;
+    word-break:break-word;
+  }
+  .card .flag .v{color:var(--cyan);font-weight:500}
+  .card .cat{
+    position:absolute;
+    top:22px;
+    right:22px;
+    font-size:11px;
+    font-weight:500;
+    line-height:1.35;
+    letter-spacing:.03em;
+    text-transform:uppercase;
+    padding:4px 10px;
+    border-radius:999px;
+    border:1px solid var(--google-border);
+    background:var(--google-gray-050);
+    color:var(--google-muted);
+  }
+  .card p{margin:var(--space-4) 0 0;font-size:14px;line-height:1.55;color:var(--google-muted)}
+  .card p b{color:var(--google-ink);font-weight:500}
+  .card .knob{
+    margin-top:var(--space-5);
+    border-top:1px solid var(--google-border);
+    padding-top:var(--space-4);
+    display:grid;
+    grid-template-columns:22px 1fr;
+    gap:6px 8px;
+    font-size:13.5px;
+    line-height:1.5;
+  }
+  .card .knob span:nth-child(odd){color:var(--cyan);font-family:var(--font-mono);font-weight:600}
+  .card .knob span:nth-child(even){color:var(--google-muted)}
+  .card .default{font-size:12px;color:var(--google-muted);margin-top:10px}
+
+  footer{
+    padding:var(--space-8) 0 var(--space-9);
+    background:var(--google-gray-050);
+    color:var(--google-muted);
+    font-size:14px;
+    line-height:1.55;
+  }
+  footer p{max-width:820px;margin:0 0 var(--space-4)}
+  footer p:last-child{margin-bottom:0}
+  footer b{color:var(--google-ink)!important;font-weight:500}
+  .toc{display:flex;flex-wrap:wrap;gap:var(--space-3) var(--space-4);margin-top:var(--space-6);font-size:14px}
+  .toc a{
+    display:inline-flex;
+    align-items:center;
+    padding:8px 16px;
+    border-radius:999px;
+    border:1px solid var(--google-border);
+    background:var(--google-white);
+    color:var(--google-ink);
+    font-weight:500;
+    transition:background .15s,border-color .15s,color .15s,box-shadow .15s;
+  }
+  .toc a::before{content:"§ ";color:var(--google-blue-deep);margin-right:4px;font-weight:500}
+  .toc a:hover{
+    background:var(--cyan-soft);
+    border-color:#d2e3fc;
+    color:var(--cyan);
+    text-decoration:none;
+  }
+
+  /* Responsive breakpoints (§8: Tablet 768px–1023px, Mobile <768px) */
+  @media (max-width:1023px){
+    .g-2{grid-template-columns:1fr}
+    .modes{grid-template-columns:repeat(2,1fr)}
+    .cards{grid-template-columns:repeat(2,1fr)}
+    .pipe{grid-template-columns:1fr}
+    .node+.node::before{content:"↓";left:50%;top:-21px;transform:translateX(-50%)}
+  }
+  @media (max-width:767px){
+    .wrap{padding:0 var(--space-5)}
+    header{padding:var(--space-8) 0 var(--space-7)}
+    section{padding:var(--space-8) 0}
+    .sec-head{grid-template-columns:1fr;gap:var(--space-2);margin-bottom:var(--space-6)}
+    .num{font-size:32px}
+    .cmd,.panel,.mode,.card{border-radius:24px;padding:20px}
+    .modes,.cards,.stats{grid-template-columns:1fr}
+    .tl .row{grid-template-columns:1fr;gap:6px}
+    .turn{grid-template-columns:92px 1fr 68px;gap:var(--space-3)}
+    .toc{gap:var(--space-3)}
+    .toc a{padding:6px 12px;font-size:13px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Antigravity BYOM · Cloud Run GPU · vllm/vllm-openai v0.32</div>
+    <h1>vLLM knobs,<br><em>explained.</em></h1>
+    <p class="lede">Every argument in <b>--args</b> for <b>Qwen3.8-27B-FP8</b> on one <b>NVIDIA RTX PRO 6000 (96 GB)</b>, grouped by what it actually moves: GPU memory and KV-cache capacity, the per-step scheduler, prefix reuse across agent turns, and the OpenAI-compatible request pipeline. Drag the sliders to see what each knob trades away.</p>
+
+    <div class="cmd" id="cmd"></div>
+    <div class="legend">
+      <span style="--c:var(--amber)">memory / KV cache</span>
+      <span style="--c:var(--cyan)">scheduler / latency</span>
+      <span style="--c:var(--mint)">caching</span>
+      <span style="--c:var(--violet)">OpenAI API shape</span>
+      <span style="--c:var(--paper-mute)">serving / identity</span>
+    </div>
+    <nav class="toc">
+      <a href="#mem">GPU memory budget</a><a href="#sched">Chunked prefill &amp; batching</a><a href="#cache">Prefix caching across turns</a><a href="#perf">Performance mode</a><a href="#pipe">Parsers &amp; tool calls</a><a href="#ref">Argument reference</a>
+    </nav>
+  </div>
+</header>
+
+<!-- ============ 01 MEMORY ============ -->
+<section id="mem">
+  <div class="wrap">
+    <div class="sec-head"><div class="num">01</div><div><h2>Where 96 GB goes — and how much becomes KV cache</h2>
+      <p class="sub">vLLM loads the weights, profiles one worst-case forward pass at <code>--max-num-batched-tokens</code>, reserves CUDA graphs, then hands <b>everything left under <code>--gpu-memory-utilization</code></b> to the paged KV cache. The KV cache is what sets how many tokens can be resident at once; <code>--max-model-len</code> and <code>--max-num-seqs</code> then decide how that pool is sliced.</p></div></div>
+
+    <div class="grid g-2">
+      <div class="panel">
+        <h3>Knobs</h3>
+        <div class="ctl"><label><code>--gpu-memory-utilization</code><output id="o-util">0.92</output></label><input type="range" id="i-util" min="0.60" max="0.99" step="0.01" value="0.92"><div class="hint">Share of VRAM vLLM may claim. The rest is headroom for the CUDA context, allocator fragmentation and NCCL/driver buffers.</div></div>
+        <div class="ctl"><label><code>--max-model-len</code><output id="o-len">262,144</output></label><input type="range" id="i-len" min="8192" max="262144" step="8192" value="262144"><div class="hint">Max prompt + output tokens per request. Requests beyond this get <code>HTTP 400</code>.</div></div>
+        <div class="ctl"><label><code>--kv-cache-dtype</code></label><div class="seg" id="s-kv"><button data-v="fp8" class="on">fp8 (1 B)</button><button data-v="bf16">auto / bf16 (2 B)</button></div><div class="hint">Bytes per K and V element. FP8 halves KV footprint → 2× resident tokens.</div></div>
+        <div class="ctl"><label><code>--max-num-seqs</code><output id="o-seqs">16</output></label><input type="range" id="i-seqs" min="1" max="64" step="1" value="16"><div class="hint">Max sequences scheduled per step. Also sizes the per-sequence Mamba/SSM state for hybrid layers.</div></div>
+        <div class="ctl"><label><code>--max-num-batched-tokens</code><output id="o-bt">8,384</output></label><input type="range" id="i-bt" min="1024" max="32768" step="256" value="8384"><div class="hint">Drives the activation peak measured during profiling.</div></div>
+        <div class="ctl"><label><code>--language-model-only</code></label><div class="seg" id="s-lm"><button data-v="1" class="on">on (skip vision tower)</button><button data-v="0">off</button></div></div>
+        <div class="ctl"><label>Typical agent session size<output id="o-sess">48,000</output></label><input type="range" id="i-sess" min="4000" max="262144" step="2000" value="48000"><div class="hint">Antigravity conversations with tool output usually sit in the 30–120K range. Used for the seat chart.</div></div>
+      </div>
+
+      <div>
+        <div class="panel">
+          <h3>VRAM allocation at startup</h3>
+          <div class="bar" id="bar"></div>
+          <div class="ticks"><span>0</span><span>24 GB</span><span>48 GB</span><span>72 GB</span><span>96 GB</span></div>
+          <div class="keys" id="keys"></div>
+          <div class="alert" id="alert"></div>
+          <div class="stats">
+            <div class="stat"><div class="l">KV cache budget</div><div class="n" id="st-kvgb">—<small>GB</small></div><div class="d">what's left after weights, activations, graphs, SSM state</div></div>
+            <div class="stat"><div class="l">Resident token capacity</div><div class="n" id="st-tok">—</div><div class="d" id="st-tok-d">≈ bytes/token at this dtype</div></div>
+            <div class="stat"><div class="l">Full-context sequences</div><div class="n" id="st-full">—<small>×</small></div><div class="d">capacity ÷ <code>--max-model-len</code> (vLLM logs this as "Maximum concurrency")</div></div>
+            <div class="stat" id="st-bind-box"><div class="l">Binding constraint</div><div class="n" id="st-bind" style="font-size:24px;padding-top:8px">—</div><div class="d" id="st-bind-d">at the chosen session size</div></div>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-top:16px">
+          <h3>Seat chart — concurrent agent sessions</h3>
+          <p class="hint" style="margin:0">Each box is one slot up to <code>--max-num-seqs</code>. Amber = fits in KV cache at the session size above; red = slot exists but KV cache would be exhausted (vLLM preempts/recomputes instead of crashing). Cloud Run <code>--concurrency=16</code> is matched to <code>--max-num-seqs 16</code> so the proxy never queues more than vLLM can co-schedule.</p>
+          <div class="seats" id="seats"></div>
+          <div class="hint" id="seats-note"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 02 SCHEDULER ============ -->
+<section id="sched">
+  <div class="wrap">
+    <div class="sec-head"><div class="num">02</div><div><h2>Chunked prefill: one big prompt vs. everyone else's next token</h2>
+      <p class="sub">Each scheduler step may process at most <code>--max-num-batched-tokens</code>. With <code>--enable-chunked-prefill</code>, a 100K-token prompt is sliced into chunks that <b>share each step with the decode tokens of other running sequences</b>, so nobody's streaming stalls. Without it, one giant prefill step freezes every other stream.</p></div></div>
+
+    <div class="grid g-2">
+      <div class="panel">
+        <h3>Knobs</h3>
+        <div class="ctl"><label><code>--enable-chunked-prefill</code></label><div class="seg" id="s-cp"><button data-v="1" class="on">on</button><button data-v="0">off</button></div></div>
+        <div class="ctl"><label><code>--max-num-batched-tokens</code><output id="o-bt2">8,384</output></label><input type="range" id="i-bt2" min="1024" max="32768" step="256" value="8384"></div>
+        <div class="ctl"><label>Incoming prompt (uncached tokens)<output id="o-pl">100,000</output></label><input type="range" id="i-pl" min="2000" max="262144" step="2000" value="100000"><div class="hint">With prefix caching, only the <i>uncached suffix</i> is prefilled — see §03.</div></div>
+        <div class="ctl"><label>Sequences already decoding<output id="o-dec">6</output></label><input type="range" id="i-dec" min="0" max="15" step="1" value="6"></div>
+        <div class="hint">Step-time model: ≈ 6 ms fixed + 0.013 ms per batched token on this GPU — illustrative, not benchmarked.</div>
+      </div>
+      <div class="panel">
+        <h3>Scheduler timeline (one request arriving)</h3>
+        <div class="tl" id="tl"></div>
+        <div class="stats">
+          <div class="stat"><div class="l">Prefill steps</div><div class="n" id="t-steps">—</div><div class="d" id="t-steps-d"></div></div>
+          <div class="stat"><div class="l">Time to first token</div><div class="n" id="t-ttft">—<small>ms</small></div><div class="d">for the new request</div></div>
+          <div class="stat" id="t-itl-box"><div class="l">Worst inter-token gap</div><div class="n" id="t-itl">—<small>ms</small></div><div class="d">felt by sequences already streaming</div></div>
+        </div>
+        <p class="hint" style="margin-top:14px">Raising <code>--max-num-batched-tokens</code> shortens TTFT for long prompts but (a) raises the activation peak in §01 and (b) lengthens each step, so streaming output stutters more. <code>8384</code> is a comfortable middle for a single-user agent on a 96 GB card; <code>--performance-mode interactivity</code> (§04) biases the kernels the same direction.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 03 PREFIX CACHE ============ -->
+<section id="cache">
+  <div class="wrap">
+    <div class="sec-head"><div class="num">03</div><div><h2>Prefix caching: why an agent loop hits 85% reuse</h2>
+      <p class="sub">An agent client resends the <b>whole conversation</b> every turn: system prompt, 15 tool schemas, all prior messages, all tool outputs, plus a new suffix. <code>--enable-prefix-caching</code> hashes KV blocks so the shared prefix is looked up instead of recomputed. For a hybrid model (attention + Gated-DeltaNet/Mamba layers) the recurrent state can't be sliced per token, so <code>--mamba-cache-mode align</code> checkpoints SSM state on block boundaries and a hit resumes from the last <i>aligned</i> boundary.</p></div></div>
+
+    <div class="grid g-2">
+      <div class="panel">
+        <h3>Knobs</h3>
+        <div class="ctl"><label><code>--enable-prefix-caching</code></label><div class="seg" id="s-pc"><button data-v="1" class="on">on</button><button data-v="0">off</button></div></div>
+        <div class="ctl"><label><code>--mamba-cache-mode</code></label><div class="seg" id="s-mb"><button data-v="align" class="on">align</button><button data-v="none">none (no SSM reuse)</button></div><div class="hint">Without <code>align</code>, hybrid models can't reuse prefixes at all: attention blocks might match, but the SSM state must be rebuilt from token 0, so vLLM recomputes everything.</div></div>
+        <div class="ctl"><label>Agent turns<output id="o-turns">6</output></label><input type="range" id="i-turns" min="1" max="12" step="1" value="6"></div>
+        <div class="ctl"><label>Tokens added per turn<output id="o-grow">6,000</output></label><input type="range" id="i-grow" min="500" max="30000" step="500" value="6000"><div class="hint">Tool call + tool result + assistant text. Base prefix (system + tool schemas) fixed at 9K.</div></div>
+      </div>
+      <div class="panel">
+        <h3>KV blocks per turn &nbsp;<span style="color:var(--paper-mute);font-weight:400;text-transform:none;letter-spacing:0">(1 block = 1,024 tokens for display; real block = 16 tokens)</span></h3>
+        <div class="turns" id="turns"></div>
+        <div class="stats">
+          <div class="stat"><div class="l">Prefix-cache hit rate</div><div class="n" id="c-hit">—<small>%</small></div><div class="d">cached ÷ total prompt tokens across all turns (README observed 85.6%)</div></div>
+          <div class="stat"><div class="l">Prefill work saved</div><div class="n" id="c-saved">—<small>tokens</small></div><div class="d">tokens never recomputed</div></div>
+          <div class="stat"><div class="l">TTFT on last turn</div><div class="n" id="c-ttft">—<small>ms</small></div><div class="d" id="c-ttft-d">vs. cold prefill</div></div>
+        </div>
+        <p class="hint" style="margin-top:14px">Cached blocks live inside the same KV pool from §01 and are evicted LRU when new requests need room — so a bigger KV budget also means a longer-lived cache. Hashes include the block's full prefix, so two different conversations never collide.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 04 PERF MODE ============ -->
+<section id="perf">
+  <div class="wrap">
+    <div class="sec-head"><div class="num">04</div><div><h2><code style="font-family:var(--serif)">--performance-mode interactivity</code></h2>
+      <p class="sub">A preset that selects kernels and CUDA-graph granularity. It doesn't change capacity; it changes <b>how each step is executed</b>. Click a mode to compare.</p></div></div>
+    <div class="modes" id="modes"></div>
+  </div>
+</section>
+
+<!-- ============ 05 PIPELINE ============ -->
+<section id="pipe">
+  <div class="wrap">
+    <div class="sec-head"><div class="num">05</div><div><h2>From raw tokens to OpenAI deltas</h2>
+      <p class="sub">Antigravity speaks <code>wireProtocol: "openai"</code>: it sends <code>tools: [...]</code> and expects <code>reasoning_content</code> and <code>tool_calls</code> deltas in the SSE stream. Three flags turn the model's raw text into that shape. Get a parser wrong and the client either sees <code>&lt;think&gt;</code> garbage in the answer or never receives a tool call.</p></div></div>
+    <div class="pipe">
+      <div class="node"><h4>Model output (raw)</h4><p>Qwen3 emits thinking, then prose, then an XML-ish tool block.</p><pre>&lt;think&gt;need to read the file first…&lt;/think&gt;
+I'll open it.
+&lt;tool_call&gt;
+&lt;function=read_file&gt;
+&lt;parameter=path&gt;README.md&lt;/parameter&gt;
+&lt;/function&gt;
+&lt;/tool_call&gt;</pre></div>
+      <div class="node"><h4>--reasoning-parser qwen3</h4><p>Streams everything inside <code>&lt;think&gt;…&lt;/think&gt;</code> as <code>delta.reasoning_content</code>; the rest as <code>delta.content</code>. Antigravity renders the former as a collapsible thought and never feeds it back as answer text.</p><pre>{"delta":{"reasoning_content":"need to read…"}}
+{"delta":{"content":"I'll open it."}}</pre></div>
+      <div class="node"><h4>--tool-call-parser qwen3_coder</h4><p>Recognises the <code>&lt;function=…&gt;&lt;parameter=…&gt;</code> grammar (not plain JSON), coerces parameter types against the tool schema, and emits incremental <code>tool_calls</code> deltas.</p><pre>{"delta":{"tool_calls":[{"index":0,
+ "function":{"name":"read_file",
+ "arguments":"{\"path\":\"README.md\"}"}}]}}</pre></div>
+      <div class="node"><h4>--enable-auto-tool-choice</h4><p>Lets the server honour <code>tool_choice: "auto"</code> (the default clients send). Without it vLLM rejects requests carrying <code>tools</code> unless <code>tool_choice</code> names one function — and agent loops send 15 tools every turn.</p><pre>finish_reason: "tool_calls"</pre></div>
+      <div class="node"><h4>--served-model-name</h4><p>The ID advertised by <code>GET /v1/models</code> and required in <code>"model"</code>. Antigravity discovers it (Tier 3) and uses it as <code>modelId</code>; a mismatch returns <code>404 model not found</code>.</p><pre>{"data":[{"id":"Qwen3.8-27B",
+ "max_model_len":262144}]}</pre></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 06 REFERENCE ============ -->
+<section id="ref">
+  <div class="wrap">
+    <div class="sec-head"><div class="num">06</div><div><h2>Argument reference</h2><p class="sub">One card per flag, in command order. The <b>↑ / ↓</b> rows say what happens if you turn the knob up or down from the deployed value.</p></div></div>
+    <div class="cards" id="cards"></div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p><b style="color:var(--paper-dim)">About the numbers.</b> The memory model is calibrated so that the deployed configuration reproduces the figure observed in the README (<b>≈1.71 M</b> FP8 KV-cache tokens): weights ≈ 28 GB (27B params in FP8 + BF16 embeddings/norms), vision tower ≈ 1.6 GB when not skipped, activation peak ≈ 2 GB + 0.5 GB per 1K batched tokens, CUDA graphs 0.8–1.6 GB by mode, SSM state ≈ 40 MB per sequence, and <b>32 KB of KV per token in FP8</b> (64 KB in BF16) across the full-attention layers of the hybrid stack. Authoritative values are printed by vLLM at startup: <code>GPU KV cache size: N tokens</code> and <code>Maximum concurrency for 262,144 tokens per request: N×</code>. Step-time and TTFT figures are illustrative.</p>
+    <p>Source command: <a href="../README.md">README.md §2</a>. Flag semantics: vLLM engine-args docs (v0.32).</p>
+  </div>
+</footer>
+
+<script>
+/* ------------------------------------------------------------------ data */
+const ARGS = [
+ {f:'/model/qwen38-27b',cat:'net',id:'model',title:'model (positional)',
+  what:'Path to the checkpoint baked into the container image, so no Hugging Face download happens at cold start. Weights stream straight from the image layer into VRAM.',
+  impact:'Dominant part of the ~5.5 min cold start is weight load + CUDA-graph capture, not network.',
+  up:'Point at a HF repo ID instead → adds a download to every cold start and needs egress.',down:'—'},
+ {f:'--host',v:'0.0.0.0',cat:'net',what:'Bind the API server on all container interfaces.',impact:'Required on Cloud Run: ingress reaches the container over the pod network, so <code>127.0.0.1</code> would fail the startup probe.',up:'—',down:'—'},
+ {f:'--port',v:'8000',cat:'net',what:'TCP port of the OpenAI-compatible server.',impact:'Must equal Cloud Run <code>--port=8000</code> and the <code>/health</code> startup-probe port. Nothing else depends on it.',up:'—',down:'—'},
+ {f:'--tensor-parallel-size',v:'1',cat:'mem',what:'Number of GPUs that split every weight matrix and the KV cache per layer.',impact:'1 = the whole model on a single RTX PRO 6000. Cloud Run offers at most one GPU per instance, so this is the only valid value here.',
+  up:'2+: weights and KV cache halve per GPU and per-token latency drops, but requires NVLink-class interconnect and multiple GPUs in one instance — not available on Cloud Run.',down:'—'},
+ {f:'--trust-remote-code',cat:'net',what:'Allow Python modeling code shipped inside the checkpoint repo to execute.',impact:'New hybrid architectures (Qwen3.8 with linear-attention layers) can ship config/processor code vLLM needs. Only pass it for images you built from a pinned, reviewed checkpoint.',up:'—',down:'Omit → vLLM may refuse to load the architecture or fall back to a generic (incorrect) config.'},
+ {f:'--gpu-memory-utilization',v:'0.92',cat:'mem',what:'Fraction of total VRAM vLLM may own: weights + activations + CUDA graphs + KV cache.',impact:'0.92 × 96 GB = 88.3 GB. Everything not consumed by fixed costs becomes KV cache, so this is the single biggest lever on resident tokens.',
+  up:'0.95–0.98: a few GB more KV (≈ +100K tokens per 3 GB in FP8) but risk of <code>CUDA out of memory</code> during profiling or under allocator fragmentation at long context.',down:'0.85: safer headroom, ~6.7 GB less KV (≈ −210K tokens). Below ~0.45 the model no longer fits.'},
+ {f:'--max-model-len',v:'262144',cat:'mem',what:'Hard ceiling on prompt + generated tokens per request (the model\'s native 256K context).',impact:'Sets (1) the request-rejection threshold (<code>400 … maximum context length</code>), (2) the minimum KV cache vLLM must be able to allocate for a single sequence (≈ 8 GB in FP8), and (3) the "Maximum concurrency" figure = capacity ÷ this value. Antigravity\'s <code>maxTokens</code> must be ≤ this.',
+  up:'Not possible beyond the model\'s native window without RoPE scaling (quality loss).',down:'131072: no extra capacity by itself (KV pool size is unchanged), but long agent sessions start failing with HTTP 400 — the exact overflow the README warns about.'},
+ {f:'--dtype',v:'auto',cat:'mem',what:'Compute/activation dtype for unquantized tensors, taken from <code>config.json</code> (BF16 for Qwen3).',impact:'The checkpoint is already FP8-quantized, so weights stay FP8; <code>auto</code> picks BF16 for everything else. Does <b>not</b> affect the KV cache dtype.',
+  up:'<code>float32</code>: 2× activation memory and much slower; pointless on Blackwell.',down:'<code>float16</code>: works, but Qwen is trained in BF16 — risk of overflow in attention logits at long context.'},
+ {f:'--kv-cache-dtype',v:'fp8',cat:'mem',what:'Storage format of K and V tensors in the paged cache (FP8 e4m3 with per-tensor scales).',impact:'Halves bytes per token versus BF16 → ~2× resident tokens: ≈1.71 M instead of ≈0.85 M on this box. Small, usually unmeasurable quality cost on Qwen3-class models; attention kernels dequantize on the fly.',
+  up:'<code>auto</code> (BF16): full-precision KV, but full-context concurrency drops from ~6 to ~3 and prefix-cache residency halves.',down:'—'},
+ {f:'--language-model-only',cat:'mem',what:'Skip loading the vision encoder / projector of a multimodal checkpoint.',impact:'Antigravity sends text + tool calls only. Skipping the vision tower frees ≈1–2 GB (→ KV cache), shortens cold start and removes image-preprocessing workers. Image inputs are rejected.',up:'—',down:'Omit → vision tower resident, slightly less KV, image inputs accepted.'},
+ {f:'--enable-prefix-caching',cat:'cache',what:'Hash every full KV block by its token prefix and reuse matching blocks across requests.',impact:'Agent loops resend the whole conversation each turn; with caching only the new suffix is prefilled. README measured an 85.6% hit rate — TTFT on turn N is a fraction of a cold prefill. Cached blocks share the KV pool and are evicted LRU.',
+  up:'—',down:'Disable → every turn re-prefills 50–200K tokens: multi-second TTFT and wasted GPU time.'},
+ {f:'--mamba-cache-mode',v:'align',cat:'cache',what:'How recurrent-state (Mamba / Gated-DeltaNet) layers of a hybrid model participate in prefix caching.',impact:'<code>align</code> allocates SSM-state checkpoints on the same block grid as attention and stores them at block boundaries, so a prefix hit can resume mid-conversation. Required for prefix caching to do anything on hybrid Qwen3.8.',
+  up:'—',down:'<code>none</code>/omit → the SSM state can\'t be restored, so vLLM recomputes from token 0 — prefix caching effectively off for this model.'},
+ {f:'--enable-chunked-prefill',cat:'sched',what:'Let the scheduler split a long prompt\'s prefill across several steps and mix it with decode tokens of other sequences.',impact:'Keeps streaming smooth for already-running sessions while a 100K-token request lands. Slight TTFT cost for the big request. Also what makes <code>--max-num-batched-tokens</code> &lt; <code>--max-model-len</code> legal.',
+  up:'—',down:'Off: one monolithic prefill step; every other stream stalls for the whole prompt, and max-num-batched-tokens would have to be ≥ max-model-len.'},
+ {f:'--max-num-batched-tokens',v:'8384',cat:'sched',what:'Token budget per scheduler step (prefill chunks + one token per decoding sequence).',impact:'Sets the prefill chunk size and therefore the length of the longest step. Also the batch size vLLM profiles at startup, so it drives the activation reserve in §01. (8384 is not a power of two — it works fine; 8192 was probably intended.)',
+  up:'16K–32K: faster TTFT on long prompts, more activation memory, longer steps → visible stutter in token streaming.',down:'2K–4K: smoother streaming, slower long-prompt TTFT, more steps per request.'},
+ {f:'--performance-mode',v:'interactivity',cat:'sched',what:'Kernel and CUDA-graph preset: <code>balanced</code> (default), <code>interactivity</code>, or <code>throughput</code>.',impact:'<code>interactivity</code> captures fine-grained CUDA graphs and picks latency-oriented kernels, minimising per-token latency at small batch — ideal for ≤16 agent sessions on one GPU.',
+  up:'<code>throughput</code>: bigger graphs and batch-oriented kernels; higher aggregate tok/s at 64+ concurrent requests, worse single-stream latency.',down:'<code>balanced</code>: middle ground; slightly higher ITL than interactivity.'},
+ {f:'--enable-auto-tool-choice',cat:'api',what:'Accept <code>tool_choice: "auto"</code> and let the model decide whether to call a tool.',impact:'Antigravity sends 15 tool schemas per turn with auto choice. Without this flag vLLM returns <code>400 "auto" tool choice requires --enable-auto-tool-choice</code>.',up:'—',down:'Omit → agent cannot run any tool.'},
+ {f:'--reasoning-parser',v:'qwen3',cat:'api',what:'Which parser separates the model\'s thinking span from the answer.',impact:'Routes <code>&lt;think&gt;…&lt;/think&gt;</code> into <code>delta.reasoning_content</code> so the UI shows it as thought and tool-call parsing sees only the answer. Must match the model family\'s think tags.',
+  up:'Wrong parser (e.g. <code>deepseek_r1</code>) → think tags leak into <code>content</code> or get silently dropped.',down:'Omit → thinking text pollutes the visible answer and can break tool-call parsing.'},
+ {f:'--tool-call-parser',v:'qwen3_coder',cat:'api',what:'Grammar used to extract tool invocations from generated text.',impact:'Qwen3-Coder emits <code>&lt;tool_call&gt;&lt;function=…&gt;&lt;parameter=…&gt;</code>, not JSON. This parser understands it, coerces argument types from the schema, and streams <code>tool_calls</code> deltas.',
+  up:'<code>hermes</code> (plain-JSON Qwen2.5 format) → calls silently arrive as text instead of <code>tool_calls</code>.',down:'Omit → same failure: text-only responses, agent never acts.'},
+ {f:'--max-num-seqs',v:'16',cat:'sched',what:'Maximum sequences co-scheduled in one step (the decode batch size cap).',impact:'Caps concurrency regardless of KV room; sizes the per-sequence SSM state. 16 matches Cloud Run <code>--concurrency=16</code> so requests queue at the ingress rather than oversubscribe the GPU.',
+  up:'32–64: more throughput only if KV capacity allows (see seat chart); each extra decode token lengthens every step → higher ITL for everyone.',down:'4–8: lowest per-token latency; extra requests wait in the vLLM queue.'},
+ {f:'--served-model-name',v:'Qwen3.8-27B',cat:'api',what:'Public model ID, independent of the filesystem path.',impact:'Returned by <code>/v1/models</code> and required in each request\'s <code>model</code> field. Antigravity\'s <code>modelId</code> / <code>agy --model</code> must match exactly.',up:'—',down:'Omit → the ID becomes <code>/model/qwen38-27b</code>, which is awkward in settings and breaks the README\'s config.'},
+];
+const CAT = {mem:'memory / KV',sched:'scheduler',cache:'caching',api:'OpenAI API',net:'serving'};
+
+/* ------------------------------------------------------------------ hero chips + cards */
+const cmd = document.getElementById('cmd');
+ARGS.forEach((a,i)=>{
+  const id = 'arg-'+(a.id||a.f.replace(/^-+/,''));
+  a.anchor = id;
+  const el = document.createElement('a'); el.className='tok c-'+a.cat; el.href='#'+id; el.style.animationDelay=(i*35)+'ms';
+  el.innerHTML = `<span>${a.f}</span>${a.v?`<span class="v">${a.v}</span>`:''}`;
+  cmd.appendChild(el);
+});
+document.getElementById('cards').innerHTML = ARGS.map(a=>`
+  <article class="card" id="${a.anchor}">
+    <div class="flag">${a.f}${a.v?` <span class="v">${a.v}</span>`:''}</div>
+    <span class="cat">${CAT[a.cat]}</span>
+    <p>${a.what}</p>
+    <p><b>Implication here:</b> ${a.impact}</p>
+    <div class="knob"><span>↑</span><span>${a.up}</span><span>↓</span><span>${a.down}</span></div>
+  </article>`).join('');
+
+/* ------------------------------------------------------------------ memory model */
+const GPU_GB=96, WEIGHTS_GB=28, VISION_GB=1.6, MAMBA_MB_PER_SEQ=40;
+const KV_KB={fp8:32,bf16:64};
+const GRAPH_GB={interactivity:1.2,balanced:0.8,throughput:1.6};
+const S={util:.92,len:262144,kv:'fp8',seqs:16,bt:8384,lm:1,sess:48000,mode:'interactivity',cp:1,pl:100000,dec:6,pc:1,mb:'align',turns:6,grow:6000};
+const fmt=n=>Math.round(n).toLocaleString('en-US');
+const fmtK=n=>n>=1e6?(n/1e6).toFixed(2)+' M':n>=1e3?Math.round(n/1e3)+' K':fmt(n);
+
+function memory(){
+  const act=2+S.bt/1000*.5, graphs=GRAPH_GB[S.mode], vis=S.lm?0:VISION_GB, mamba=S.seqs*MAMBA_MB_PER_SEQ/1024;
+  const budget=S.util*GPU_GB, fixed=WEIGHTS_GB+vis+act+graphs+mamba, kv=budget-fixed;
+  const kb=KV_KB[S.kv], tokens=Math.max(0,kv*1024*1024/kb), minGB=S.len*kb/1024/1024;
+  return {act,graphs,vis,mamba,budget,kv,tokens,minGB,kb,headroom:GPU_GB-budget};
+}
+function renderMemory(){
+  const m=memory();
+  const segs=[['s-w','Weights (FP8)',WEIGHTS_GB],['s-vis','Vision tower',m.vis],['s-act','Activation peak',m.act],['s-gr','CUDA graphs',m.graphs],['s-mb','SSM state',m.mamba],['s-kv','KV cache',Math.max(0,m.kv)],['s-hr','Headroom',m.headroom]];
+  const bar=document.getElementById('bar');
+  bar.innerHTML=segs.map(([c,l,g])=>`<div class="${c}" style="width:${Math.max(0,g/GPU_GB*100)}%" title="${l}: ${g.toFixed(1)} GB">${g/GPU_GB>.07?l+' '+g.toFixed(1):''}</div>`).join('');
+  document.getElementById('keys').innerHTML=segs.map(([c,l,g])=>`<div><i class="${c}" style="${c==='s-hr'?'border:1px solid var(--line-2)':''}"></i>${l}<b>${g.toFixed(1)} GB</b></div>`).join('');
+  document.getElementById('st-kvgb').innerHTML=`${m.kv.toFixed(1)}<small>GB</small>`;
+  document.getElementById('st-tok').textContent=fmtK(m.tokens);
+  document.getElementById('st-tok-d').textContent=`≈ ${m.kb} KB per token in ${S.kv.toUpperCase()}`;
+  const full=m.tokens/S.len;
+  document.getElementById('st-full').innerHTML=`${full.toFixed(1)}<small>× ${fmtK(S.len)}</small>`;
+  // alert
+  const al=document.getElementById('alert'); al.className='alert show';
+  if(m.kv<=0){al.textContent=`Startup fails: ${m.budget.toFixed(1)} GB budget cannot even hold the fixed costs (${(m.budget-m.kv).toFixed(1)} GB). Raise --gpu-memory-utilization or lower --max-num-batched-tokens.`;}
+  else if(m.kv<m.minGB){al.textContent=`Startup fails: KV budget ${m.kv.toFixed(1)} GB < ${m.minGB.toFixed(1)} GB needed for ONE sequence of ${fmt(S.len)} tokens. vLLM raises "max seq len is larger than the maximum number of tokens that can be stored in KV cache" — lower --max-model-len, use fp8 KV, or raise utilization.`;}
+  else if(S.util>=.96){al.textContent=`Boots, but ${m.headroom.toFixed(1)} GB headroom is thin: CUDA context + allocator fragmentation at 256K context commonly needs 3–5 GB. Expect sporadic OOM under load.`;}
+  else {al.className='alert show ok'; al.textContent=`Boots cleanly. One full-context request needs ${m.minGB.toFixed(1)} GB; ${full.toFixed(1)} of them fit side by side.`;}
+  // binding constraint + seats
+  const bySess=Math.floor(m.tokens/S.sess), seatsFit=Math.min(S.seqs,bySess);
+  const bind=document.getElementById('st-bind'), box=document.getElementById('st-bind-box');
+  if(bySess>=S.seqs){bind.textContent='--max-num-seqs';box.classList.remove('warn');document.getElementById('st-bind-d').textContent=`KV could hold ${bySess} sessions of ${fmtK(S.sess)} tokens; the scheduler caps at ${S.seqs}.`;}
+  else{bind.textContent='KV cache';box.classList.add('warn');document.getElementById('st-bind-d').textContent=`Only ${bySess} sessions of ${fmtK(S.sess)} fit; slots ${bySess+1}–${S.seqs} would trigger preemption.`;}
+  const seats=document.getElementById('seats'); let h='';
+  for(let i=0;i<S.seqs;i++){h+=`<div class="seat ${i<seatsFit?'fit':'kvcap'}" title="slot ${i+1}"></div>`;}
+  seats.innerHTML=h;
+  document.getElementById('seats-note').textContent=`${seatsFit} of ${S.seqs} slots can run a ${fmtK(S.sess)}-token session simultaneously; at full ${fmtK(S.len)} context: ${Math.min(S.seqs,Math.floor(full))} slots.`;
+}
+
+/* ------------------------------------------------------------------ scheduler */
+function stepMs(tokens){return 6+tokens*.013;}
+function renderSched(){
+  const bt=S.bt, dec=S.dec, pl=S.pl, tl=document.getElementById('tl');
+  let rows='', steps, ttft, itl, total;
+  if(S.cp){
+    const chunk=Math.max(256,bt-dec); steps=Math.ceil(pl/chunk);
+    const times=[]; let rem=pl; for(let i=0;i<steps;i++){const t=Math.min(chunk,rem); rem-=t; times.push(stepMs(t+dec));}
+    total=times.reduce((a,b)=>a+b,0); ttft=total; itl=Math.max(...times);
+    const shown=Math.min(steps,40);
+    rows+=`<div class="row"><div class="lab"><b>New request</b>prefill in ${steps} chunk${steps>1?'s':''} of ≤${fmt(chunk)}</div><div class="track">${Array.from({length:shown},(_,i)=>`<div class="step st-p" style="width:${100/shown}%">${shown<=14?'P'+(i+1):''}</div>`).join('')}${steps>shown?`<div class="step" style="width:0"></div>`:''}</div></div>`;
+    rows+=`<div class="row"><div class="lab"><b>${dec} decoding seqs</b>1 token each, every step</div><div class="track">${Array.from({length:shown},()=>`<div class="step st-d" style="width:${100/shown}%">${shown<=14?'+'+dec:''}</div>`).join('')}</div></div>`;
+    document.getElementById('t-steps-d').textContent=`chunk = ${fmt(bt)} − ${dec} decode tokens = ${fmt(chunk)} tokens`;
+  }else{
+    steps=1; total=stepMs(pl); ttft=total; itl=total;
+    rows+=`<div class="row"><div class="lab"><b>New request</b>one monolithic prefill</div><div class="track"><div class="step st-p" style="width:100%">${fmt(pl)} tokens in one step</div></div></div>`;
+    rows+=`<div class="row"><div class="lab"><b>${dec} decoding seqs</b>frozen until it finishes</div><div class="track" style="background:repeating-linear-gradient(135deg,#fce8e6 0 6px,#fad2cf 6px 12px);border-color:#f6aea9"><div class="step" style="width:100%;background:transparent;color:var(--rose)"><span class="pulse"></span>stalled ${Math.round(total)} ms</div></div></div>`;
+    document.getElementById('t-steps-d').textContent=`--max-num-batched-tokens must be ≥ --max-model-len in this mode`;
+  }
+  tl.innerHTML=rows+`<div class="ruler"><span>t = 0</span><span>${Math.round(total)} ms</span></div>`;
+  document.getElementById('t-steps').textContent=steps;
+  document.getElementById('t-ttft').innerHTML=`${fmt(ttft)}<small>ms</small>`;
+  document.getElementById('t-itl').innerHTML=`${fmt(itl)}<small>ms</small>`;
+  document.getElementById('t-itl-box').classList.toggle('warn',itl>250);
+}
+
+/* ------------------------------------------------------------------ prefix cache */
+function renderCache(){
+  const BASE=9000, BLK=1024, box=document.getElementById('turns'); let html='', cached=0, total=0, lastNew=0, lastTotal=0;
+  const effective=S.pc && S.mb==='align';
+  for(let t=1;t<=S.turns;t++){
+    const len=BASE+(t-1)*S.grow, blocks=Math.ceil(len/BLK);
+    const prevLen=t===1?0:BASE+(t-2)*S.grow;
+    const hitTokens=effective?Math.floor(prevLen/BLK)*BLK:0; // resume only from aligned boundary
+    const hitBlocks=Math.floor(hitTokens/BLK);
+    const partial=effective&&t>1&&prevLen%BLK!==0?1:0;
+    cached+=hitTokens; total+=len; lastNew=len-hitTokens; lastTotal=len;
+    let b=''; for(let i=0;i<blocks;i++){b+=`<div class="blk ${i<hitBlocks?'hit':(i<hitBlocks+partial?'part':'')}"></div>`;}
+    html+=`<div class="turn"><div class="lab">turn ${t} · ${fmtK(len)}</div><div class="blocks">${b}</div><div class="pct">${len?Math.round(hitTokens/len*100):0}% hit</div></div>`;
+  }
+  box.innerHTML=html;
+  const rate=total?cached/total*100:0;
+  document.getElementById('c-hit').innerHTML=`${rate.toFixed(1)}<small>%</small>`;
+  document.getElementById('c-saved').innerHTML=`${fmtK(cached)}<small>tokens</small>`;
+  const chunk=Math.max(256,S.bt-S.dec);
+  const ms=n=>{let r=n,s=0;while(r>0){const t=Math.min(chunk,r);r-=t;s+=stepMs(t+S.dec);}return s;};
+  document.getElementById('c-ttft').innerHTML=`${fmt(ms(lastNew))}<small>ms</small>`;
+  document.getElementById('c-ttft-d').textContent=`${fmtK(lastNew)} uncached tokens vs. ${fmt(ms(lastTotal))} ms cold (${fmtK(lastTotal)})`;
+}
+
+/* ------------------------------------------------------------------ perf modes */
+const MODES=[
+ {k:'balanced',t:'balanced',lat:3,thr:3,g:'medium',d:'Default. General-purpose CUDA graphs and kernels.'},
+ {k:'interactivity',t:'interactivity (deployed)',lat:5,thr:2,g:'fine-grained (more, smaller)',d:'Lowest per-token latency at small batch. Fine-grained graphs cover more shapes, costing a bit more VRAM and capture time.'},
+ {k:'throughput',t:'throughput',lat:2,thr:5,g:'large',d:'Aggregate tokens/s under heavy concurrency; larger graphs, batch-oriented attention kernels. Worse single-stream feel.'}];
+function renderModes(){
+  document.getElementById('modes').innerHTML=MODES.map(m=>`<div class="mode ${S.mode===m.k?'on':''}" data-k="${m.k}" style="cursor:pointer">
+    <h4>--performance-mode ${m.t}</h4><p>${m.d}</p>
+    <p style="margin-top:10px">single-stream latency</p><div class="dial">${[1,2,3,4,5].map(i=>`<i class="${i<=m.lat?'f':''}"></i>`).join('')}</div>
+    <p>aggregate throughput</p><div class="dial">${[1,2,3,4,5].map(i=>`<i class="${i<=m.thr?'f':''}"></i>`).join('')}</div>
+    <p>CUDA graphs: ${m.g} · reserve ≈ ${GRAPH_GB[m.k]} GB</p></div>`).join('');
+  document.querySelectorAll('.mode').forEach(el=>el.onclick=()=>{S.mode=el.dataset.k;renderModes();renderMemory();});
+}
+
+/* ------------------------------------------------------------------ wiring */
+function range(id,key,outId,fmtFn,after){
+  const el=document.getElementById(id), out=document.getElementById(outId);
+  const paint=()=>{el.style.setProperty('--p',((el.value-el.min)/(el.max-el.min)*100)+'%');};
+  el.addEventListener('input',()=>{S[key]=+el.value;out.textContent=fmtFn(+el.value);paint();after();});
+  paint();
+}
+function seg(id,key,after){
+  const el=document.getElementById(id);
+  el.querySelectorAll('button').forEach(b=>b.onclick=()=>{el.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');const v=b.dataset.v;S[key]=isNaN(v)?v:+v;after();});
+}
+const all=()=>{renderMemory();renderSched();renderCache();};
+range('i-util','util','o-util',v=>v.toFixed(2),renderMemory);
+range('i-len','len','o-len',fmt,renderMemory);
+range('i-seqs','seqs','o-seqs',String,renderMemory);
+range('i-sess','sess','o-sess',fmt,renderMemory);
+range('i-bt','bt','o-bt',fmt,()=>{document.getElementById('i-bt2').value=S.bt;document.getElementById('o-bt2').textContent=fmt(S.bt);all();});
+range('i-bt2','bt','o-bt2',fmt,()=>{document.getElementById('i-bt').value=S.bt;document.getElementById('o-bt').textContent=fmt(S.bt);all();});
+range('i-pl','pl','o-pl',fmt,renderSched);
+range('i-dec','dec','o-dec',String,()=>{renderSched();renderCache();});
+range('i-turns','turns','o-turns',String,renderCache);
+range('i-grow','grow','o-grow',fmt,renderCache);
+seg('s-kv','kv',renderMemory); seg('s-lm','lm',renderMemory); seg('s-cp','cp',renderSched); seg('s-pc','pc',renderCache); seg('s-mb','mb',renderCache);
+renderModes(); all();
+</script>
+</body>
+</html>
